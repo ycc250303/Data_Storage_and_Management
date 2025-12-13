@@ -1,112 +1,123 @@
 import asyncio
 import aiohttp
 import random
-import time
 import ssl
 import os
-from fake_useragent import UserAgent
 
-MAX_RETRIES = 3  # 最大重试次数
+# ================== 基础配置 ==================
+MAX_RETRIES = 3
+PROXY = "http://127.0.0.1:7897"  # Clash 默认端口
+ASIN_FILE = "../unique_product_ids.txt"  # ASIN 列表文件
+RESULT_DIR = "../results"
+FAILED_DIR = "../failed"
+START_LINE = 190000  # 从第几行开始抓取（0 表示第一行）
 
-# 使用 fake_useragent
-ua = UserAgent()
+MAX_CONCURRENT = 50   # 并发数量，不建议超过 5
+BATCH_SIZE = 500      # 每批抓取数量
+BATCH_SLEEP = (18, 30)  # 每批后休眠
 
-# 自定义浏览器版本
-BROWSER_VERSIONS = [
-    ("96.0.4664.110", "Windows NT 10.0; Win64; x64"),
-    ("98.0.4758.102", "Windows NT 10.0; Win64; x64"),
-    ("95.0.4638.69", "Macintosh; Intel Mac OS X 10_15_7"),
-]
+# ================== 浏览器 Cookie（必须真实） ==================
+AMAZON_COOKIE = (
+    "session-id=145-3226986-2591160; "
+    "session-token=//3a1z8kWavli4dC0+mLhzSzhgp+8iOEu/pLNU/HJAjQx+7JiqMfbuTYR+hpY5GOw/FCTClaakVHP8+oNNlgbp4gyxwF2Mw3uVVfCTcTtnSocZEwDVIM5zKfHbdg9GrG5KGcb1098nCaKFQ615Zczmzt+fajAOzKWF5z4WwL8pCtARiO7MIEroh35zbNB1Rft2mW3GwlMXd8v+V76T4aByDtjABtyZmqLBcFdqCvyJPm2MjDWIE//LbkEMNAV2VD2T8VORGfjH1Q6S4yMVq6JT1iwOcN+vCgOSlM5g4n0w0RNnlPSVmwUinvcHWYLNvjmpOWO/UPpPM5hw6mfqxO8hq7CpLqGBCm4k; "
+    "ubid-main=135-8397825-3395814; "
+    "lc-main=en_US; "
+    "i18n-prefs=USD"
+)
 
-ACCEPT_LANGUAGES = [
-    "en-US,en;q=0.9",
-    "en-GB,en;q=0.9,en-US;q=0.8",
-]
+# ================== Prime 专用 Headers ==================
+HEADERS = {
+    "user-agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,*/*;q=0.8"
+    ),
+    "accept-language": "en-US,en;q=0.9",
+    "referer": "https://www.amazon.com/gp/video/storefront",
+    "upgrade-insecure-requests": "1",
+    "cookie": AMAZON_COOKIE,
+}
 
-ACCEPT_ENCODINGS = [
-    "gzip, deflate, br",
-    "gzip, deflate",
-]
+# ================== 核心函数 ==================
+async def fetch_single_prime_page(semaphore, session, asin: str):
+    async with semaphore:
+        # 跳过已抓取的文件
+        result_path = os.path.join(RESULT_DIR, f"{asin}.html")
+        failed_path = os.path.join(FAILED_DIR, f"{asin}.html")
+        url = f"https://www.amazon.com/gp/video/detail/{asin}"
 
-
-def get_random_headers():
-    browser_version, os_info = random.choice(BROWSER_VERSIONS)
-
-    user_agent = (
-        f"Mozilla/5.0 ({os_info}) AppleWebKit/537.36 "
-        f"(KHTML, like Gecko) Chrome/{browser_version} Safari/537.36"
-    )
-
-    return {
-        "user-agent": user_agent,
-        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "accept-language": random.choice(ACCEPT_LANGUAGES),
-        "accept-encoding": random.choice(ACCEPT_ENCODINGS),
-        "cache-control": random.choice(["max-age=0", "no-cache"]),
-        "referer": "https://www.amazon.com/",
-    }
-
-
-async def update_cookie():
-    """生成真实 Cookie"""
-    session_id = f"{random.randint(100000000, 999999999)}-{random.randint(100000000, 999999999)}"
-    session_token = "".join(random.choice("abcdefghijklmnopqrstuvwxyz0123456789") for _ in range(80))
-    ubid_main = f"{random.randint(100, 999)}-{random.randint(1000000, 9999999)}"
-
-    return (
-        f"session-id={session_id}; "
-        f"session-token={session_token}; "
-        f"ubid-main={ubid_main}"
-    )
-
-
-async def fetch_single_page(url, asin):
-    """核心：获取单个页面的 HTML 内容"""
-    ssl_context = ssl.create_default_context()
-
-    async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(limit=50, ssl=ssl_context)
-    ) as session:
-
-        for retry in range(MAX_RETRIES):
+        for retry in range(1, MAX_RETRIES + 1):
             try:
-                headers = get_random_headers()
-                headers["cookie"] = await update_cookie()
+                async with session.get(
+                    url,
+                    headers=HEADERS,
+                    proxy=PROXY,
+                    timeout=30
+                ) as resp:
 
-                async with session.get(url, headers=headers, timeout=20) as resp:
-                    content = await resp.text()
+                    html = await resp.text()
 
-                    # 基本反爬检测
-                    if "captcha" in content.lower() or len(content) < 3000:
-                        print(f"[警告] 反爬触发，重试第{retry + 1}次...")
-                        await asyncio.sleep(random.uniform(3, 8))
+                    # ===== 反爬检测 =====
+                    if (
+                        "captcha" in html.lower()
+                        or "The availability of Prime Video and its content differs by country or region" in html
+                        or "robot check" in html.lower()
+                    ):
+                        print(f"[WARN] {asin} 页面异常，第 {retry} 次")
+                        await asyncio.sleep(random.uniform(20, 30))
                         continue
 
-                    # 🚀 成功后直接保存到 ../results
-                    save_dir = "../results"
-                    os.makedirs(save_dir, exist_ok=True)
-                    
-                    file_path = f"{save_dir}/{asin}.html"
-                    with open(file_path, "w", encoding="utf-8") as f:
-                        f.write(content)
+                    # ===== 保存成功页面 =====
+                    os.makedirs(RESULT_DIR, exist_ok=True)
+                    with open(result_path, "w", encoding="utf-8") as f:
+                        f.write(html)
 
-                    print(f"请求成功！文件已保存到：{file_path}")
-                    return file_path
+                    print(f"✅ {asin} 保存成功")
+                    # 每个请求后随机延时，降低被封风险
+                    await asyncio.sleep(random.uniform(1, 2))
+                    return
 
             except Exception as e:
-                print(f"[错误] {e}, 正在重试第{retry + 1}次...")
-                await asyncio.sleep(random.uniform(3, 8))
+                print(f"[ERROR] {asin} {e}，第 {retry} 次重试")
+                await asyncio.sleep(random.uniform(20, 30))
 
-        print("达到最大重试次数，失败。")
-        return None
+        # 达到最大重试，保存异常页面到 failed
+        os.makedirs(FAILED_DIR, exist_ok=True)
+        with open(failed_path, "w", encoding="utf-8") as f:
+            f.write(f"[FAILED] {asin} 无法抓取\n")
+        print(f"❌ {asin} 达到最大重试次数，保存到 failed")
 
+# ================== 批量抓取 ==================
+async def fetch_multiple_prime_pages(start_line: int = 0):
+    ssl_context = ssl.create_default_context()
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT)
 
-async def main():
-    asin = "B004VZW92W"
-    url = f"https://www.amazon.com/dp/{asin}"
+    # 读取 ASIN 列表
+    with open(ASIN_FILE, "r", encoding="utf-8") as f:
+        asins = [line.strip() for line in f.readlines()]
 
-    await fetch_single_page(url, asin)
+    asins = asins[start_line:]
 
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
+        for i in range(0, len(asins), BATCH_SIZE):
+            batch = asins[i:i + BATCH_SIZE]
 
+            print(f"\n🚀 开始批次 {start_line + i} ~ {start_line + i + len(batch) - 1}")
+
+            tasks = [
+                fetch_single_prime_page(semaphore, session, asin)
+                for asin in batch
+            ]
+
+            await asyncio.gather(*tasks)
+
+            print("🛑 批次完成，进入冷却")
+            await asyncio.sleep(random.uniform(*BATCH_SLEEP))
+
+# ================== 测试入口 ==================
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(fetch_multiple_prime_pages(START_LINE))

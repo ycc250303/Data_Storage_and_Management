@@ -8,7 +8,7 @@ import json
 from fake_useragent import UserAgent
 from datetime import datetime, timedelta
 
-START_POSITION = 170000  # 开始位置
+START_POSITION = 181000  # 开始位置
 MAX_WORKERS = 20  # 同时运行的线程数
 BATCH_SIZE = 50  # 每批处理的ID数量
 MAX_RETRIES = 3  # 最大重试次数
@@ -18,7 +18,7 @@ ua = UserAgent()
 
 # 预定义一些常见的浏览器版本和操作系统组合
 BROWSER_VERSIONS = [
-    ("90.0.4430.212", "Windows NT 10.0; Win64; x64"),
+    ("90.0.4430.212", "Windows NT 10.0; Win64; x64"),  
     ("91.0.4472.124", "Windows NT 10.0; Win64; x64"),
     ("92.0.4515.107", "Windows NT 10.0; Win64; x64"),
     ("93.0.4577.82", "Windows NT 10.0; Win64; x64"),

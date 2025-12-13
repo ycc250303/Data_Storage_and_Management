@@ -1,100 +1,143 @@
 import pickle
 import pandas as pd
 import re
-from datetime import datetime
-from fuzzywuzzy import process, fuzz
-import concurrent.futures
-from functools import partial
 from collections import defaultdict
+from rapidfuzz import fuzz
 from tqdm import tqdm
 
+# ================== 文件配置 ==================
 INPUT_FILE = '../movie_info_marks_cleaned.csv'
 OUTPUT_CSV_FILE = '../movie_info_name_merged.csv'
 OUTPUT_NAME_SET = '../name_set.pkl'
-OUTPUT_NAME_MAP ='../name_map.pkl'
+OUTPUT_NAME_MAP = '../name_map.pkl'
 
-# 提取所有姓名到set中，并存储到二进制文件
+# ================== 参数配置（20w数据安全值） ==================
+FUZZY_THRESHOLD = 92     # 相似度阈值（不建议低于 90）
+MIN_BUCKET_SIZE = 2      # 至少2个才做比较
+
+# ================== 姓名规范化 ==================
+def normalize(name: str) -> str:
+    name = name.lower().strip()
+    name = re.sub(r'[^a-z\s]', '', name)
+    name = re.sub(r'\s+', ' ', name)
+    return name
+
+def name_key(norm_name: str):
+    """
+    分桶 key：姓 + 名首字母
+    """
+    parts = norm_name.split()
+    if len(parts) == 0:
+        return None
+    last_name = parts[-1]
+    first_initial = parts[0][0]
+    return last_name, first_initial
+
+# ================== Step 1：提取姓名 ==================
 def beforeMerge():
-    print("开始提取所有姓名...")
-    raw_data = pd.read_csv(INPUT_FILE, encoding='utf-8', low_memory=False)
+    print("🚀 开始提取所有姓名...")
+    df = pd.read_csv(INPUT_FILE, encoding='utf-8', low_memory=False)
+
     name_set = set()
 
-    for column in ['Directors', 'Actors']:
-        raw_data[column].dropna(inplace=True)
-        for index, names in enumerate(raw_data[column]):
-            if pd.notnull(names):
-                for name in names.split(','):
-                    name = name.strip()
-                    if name and not re.match(r'^[\s#*\-]+$', name):  # 过滤无效字符串
-                        name_set.add(name)
-            if (index + 1) % 1000 == 0:
-                print(f"已处理 {index + 1} 行数据...")
+    for col in ['Directors', 'Actors']:
+        if col not in df.columns:
+            continue
 
-    with open(OUTPUT_NAME_SET, 'wb') as set_file:
-        pickle.dump(name_set, set_file)
+        for names in df[col].dropna():
+            for name in str(names).split(','):
+                name = name.strip()
+                if name:
+                    name_set.add(name)
 
-    name_mappings = defaultdict(str)
-    with open(OUTPUT_NAME_MAP, 'wb') as map_file:
-        pickle.dump(name_mappings, map_file)
-    print("提取所有姓名完成...")
+    print(f"✅ 提取完成，唯一姓名数：{len(name_set)}")
 
-# 并行处理姓名合并
-def mergeNamesParallel(names_chunk, name_set, name_mappings):
-    for index, name in enumerate(tqdm(names_chunk, desc="处理姓名")):
-        if name:  # 确保名称非空
-            similar_names = process.extractBests(name, name_set, score_cutoff=90, scorer=fuzz.ratio)
-            for similar_name, score in similar_names:
-                if similar_name != name:
-                    name_set.discard(similar_name)
-                    name_mappings[similar_name] = name
-    return name_set, name_mappings
+    with open(OUTPUT_NAME_SET, 'wb') as f:
+        pickle.dump(name_set, f)
 
+    with open(OUTPUT_NAME_MAP, 'wb') as f:
+        pickle.dump({}, f)
+
+# ================== Step 2：分桶 + fuzzy 去重 ==================
 def mergeNames():
-    print("开始合并姓名...")
-    with open(OUTPUT_NAME_SET, 'rb') as set_file:
-        name_set = pickle.load(set_file)
-    with open(OUTPUT_NAME_MAP, 'rb') as map_file:
-        name_mappings = pickle.load(map_file)
+    print("🚀 开始合并姓名（分桶 + rapidfuzz）...")
 
-    name_list = sorted(list(name_set))
-    chunk_size = len(name_list) // 10  # 根据CPU核心数调整分块数量
-    chunks = [name_list[i:i + chunk_size] for i in range(0, len(name_list), chunk_size)]
+    with open(OUTPUT_NAME_SET, 'rb') as f:
+        name_set = pickle.load(f)
 
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        func = partial(mergeNamesParallel, name_set=name_set.copy(), name_mappings=name_mappings.copy())
-        results = list(tqdm(executor.map(func, chunks), total=len(chunks), desc="处理姓名分块"))
+    # 1️⃣ 规范化映射
+    norm_map = defaultdict(list)
+    for name in name_set:
+        norm = normalize(name)
+        if norm:
+            norm_map[norm].append(name)
 
-    # 合并结果
-    for name_set_part, name_mappings_part in results:
-        name_set.intersection_update(name_set_part)
-        name_mappings.update(name_mappings_part)
+    # 2️⃣ 完全一致的直接合并
+    name_mappings = {}
+    canonical = {}
 
-    print(f"合并姓名完成，共 {len(name_mappings)} 个映射关系...")
-    with open(OUTPUT_NAME_SET, 'wb') as set_file:
-        pickle.dump(name_set, set_file)
-    with open(OUTPUT_NAME_MAP, 'wb') as map_file:
-        pickle.dump(name_mappings, map_file)
+    for norm, originals in norm_map.items():
+        main = originals[0]
+        canonical[norm] = main
+        for other in originals[1:]:
+            name_mappings[other] = main
 
-# 根据映射关系替换导演、演员、主演的姓名
+    # 3️⃣ 分桶
+    buckets = defaultdict(list)
+    for norm, main_name in canonical.items():
+        key = name_key(norm)
+        if key:
+            buckets[key].append(main_name)
+
+    # 4️⃣ 桶内 fuzzy
+    for key, names in tqdm(buckets.items(), desc="🔍 分桶匹配"):
+        if len(names) < MIN_BUCKET_SIZE:
+            continue
+
+        for i in range(len(names)):
+            a = names[i]
+            na = normalize(a)
+            for j in range(i + 1, len(names)):
+                b = names[j]
+                if b in name_mappings:
+                    continue
+
+                nb = normalize(b)
+                score = fuzz.ratio(na, nb)
+                if score >= FUZZY_THRESHOLD:
+                    name_mappings[b] = a
+
+    print(f"✅ 合并完成，共生成映射关系：{len(name_mappings)}")
+
+    with open(OUTPUT_NAME_MAP, 'wb') as f:
+        pickle.dump(name_mappings, f)
+
+# ================== Step 3：回填 CSV ==================
 def afterMerge():
-    print("开始根据映射关系替换姓名...")
-    raw_data = pd.read_csv(INPUT_FILE, encoding='utf-8', low_memory=False)
-    with open(OUTPUT_NAME_MAP, 'rb') as map_file:
-        name_mappings = pickle.load(map_file)
+    print("🚀 开始替换 CSV 中姓名...")
+    df = pd.read_csv(INPUT_FILE, encoding='utf-8', low_memory=False)
 
-    columns_to_replace = ['Directors', 'Actors']
-    for column in columns_to_replace:
-        raw_data[column] = raw_data[column].apply(
-            lambda x: ', '.join(
-                [name_mappings.get(name.strip(), name.strip()) for name in str(x).split(',') if name.strip()]
-            ) if pd.notnull(x) else x
-        )
-        print(f"已处理列 {column}...")
+    with open(OUTPUT_NAME_MAP, 'rb') as f:
+        name_mappings = pickle.load(f)
 
-    raw_data = raw_data.replace({'': None, 'nan': None})
-    raw_data.to_csv(OUTPUT_CSV_FILE, index=False, encoding='utf-8')
-    print("根据映射关系替换姓名完成...")
+    def replace_names(cell):
+        if pd.isna(cell):
+            return cell
+        result = []
+        for name in str(cell).split(','):
+            name = name.strip()
+            result.append(name_mappings.get(name, name))
+        return ', '.join(result)
 
+    for col in ['Directors', 'Actors']:
+        if col in df.columns:
+            df[col] = df[col].apply(replace_names)
+            print(f"✅ 已处理列：{col}")
+
+    df.to_csv(OUTPUT_CSV_FILE, index=False, encoding='utf-8')
+    print(f"🎉 完成！输出文件：{OUTPUT_CSV_FILE}")
+
+# ================== 主入口 ==================
 if __name__ == "__main__":
     beforeMerge()
     mergeNames()

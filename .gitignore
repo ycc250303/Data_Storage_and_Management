@@ -6,6 +6,10 @@ ETL/results/
 ETL/errors
 ETL/csvs/
 
+data/
+
+backend/
+
 .csv
 .txt
 .pkl

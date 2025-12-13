@@ -2,7 +2,7 @@ import datetime
 import pandas as pd
 
 REVIEW_FILE = "../earliest_review_time.csv"
-INPUT_MOVIE_FILE = "../movie_info_movies_merged.csv"
+INPUT_MOVIE_FILE = "../movie_info_merged.csv"
 OUTPUT_MOVIE_FILE = "../movie_info_final.csv"
 
 def addReleaseDate():

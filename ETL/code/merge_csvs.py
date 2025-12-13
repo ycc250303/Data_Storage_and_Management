@@ -1,8 +1,8 @@
 import os
 
-CSV_DIR = 'csvs'
+CSV_DIR = '../csvs'
 
-HEADER = "ASIN,Title,Language,ReleaseDate,Rated,Actors,Directors,Genres,Rating,Editions\n"
+HEADER = "ASIN,Title,Language,ReleaseDate,Rated,Actors,Directors,Genres,Score,Editions\n"
 
 def merge_files(output_path):
     with open(output_path, 'w', encoding='utf-8') as outfile:

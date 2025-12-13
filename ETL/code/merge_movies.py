@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import re
+import os
 import pickle
 
 INPUT_FILE = '../movie_info_marks_cleaned.csv'
@@ -104,11 +105,16 @@ def merge_movies():
     # 保存去重后的数据
     deduped_df.to_csv(OUTPUT_MERGED_FILE, index=False, encoding='utf-8')
 
+    # 删除中间文件
+    if os.path.exists(OUTPUT_CSV_FILE):
+        os.remove(OUTPUT_CSV_FILE)
+        print(f"已删除中间文件 {OUTPUT_CSV_FILE}")
+
     # 保存映射关系
     mapping_df.to_csv(OUTPUT_TITLE_DIRECTORS_MAPPING, index=False, encoding='utf-8')
 
-    print("电影信息去重和数据血缘关系建立完成。")
-    print(f"去重后的数据保存在 {OUTPUT_CSV_FILE}")
+    print("电影信息去重和数据血缘关系建立完成。")    
+    print(f"去重后的数据保存在 {OUTPUT_MERGED_FILE}")
     print(f"数据血缘关系保存在 {OUTPUT_TITLE_DIRECTORS_MAPPING}")
 
 
