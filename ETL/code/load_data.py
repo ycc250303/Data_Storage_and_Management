@@ -48,6 +48,23 @@ def safe_float(value, default=0.0):
     except Exception:
         return default
 
+def safe_int(value, default=0):
+    """安全转换为整数（支持小数格式如 '5.0'）"""
+    if value is None:
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    try:
+        s = str(value).strip()
+        if s == "":
+            return default
+        # 先转换为浮点数，再转换为整数（处理 '5.0' 这种情况）
+        return int(float(s))
+    except Exception:
+        return default
+
 
 class AsyncLoadDataTool:
     """异步并发数据加载工具（仿照爬虫的异步模式）"""
@@ -217,8 +234,8 @@ class AsyncLoadDataTool:
                 review.get('review/userId'),
                 review.get('review/profileName'),
                 review.get('review/helpfulness'),
-                int(review.get('review/score', 0)),
-                review.get('review/time', 0),
+                safe_int(review.get('review/score', 0)),
+                safe_int(review.get('review/time', 0)),
                 review.get('review/summary'),
                 review.get('review/text')
             ))
