@@ -71,7 +71,7 @@ if __name__ == '__main__':
     input_file = '../../movies.txt'  
     output_file = '../all_review_time.csv'
 
-    # extractReviewTime(input_file, output_file)
+    extractReviewTime(input_file, output_file)
 
     # 其他处理流程
     extractUniqueReviewTime(output_file, '../earliest_review_time.csv')

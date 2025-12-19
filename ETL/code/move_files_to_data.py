@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-将ETL文件夹中所有后缀为.csv和.pkl的文件迁移到data文件夹
+将ETL文件夹中所有后缀为.csv和.pkl的文件迁移到data/etl文件夹
 """
 
 import os
@@ -15,10 +15,10 @@ def move_files_to_data():
     # 当前ETL文件夹路径
     etl_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
-    # data文件夹路径
-    data_dir = os.path.join(etl_dir, '../data')
+    # data/etl文件夹路径
+    data_dir = os.path.join(etl_dir, '../data/etl')
     
-    # 确保data文件夹存在
+    # 确保data/etl文件夹存在
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
         print(f"创建目录: {data_dir}")
@@ -45,7 +45,7 @@ def move_files_to_data():
                 try:
                     # 移动文件
                     shutil.move(source_path, target_path)
-                    print(f"移动文件: {file_name} -> data/{file_name}")
+                    print(f"移动文件: {file_name} -> data/etl/{file_name}")
                     moved_count += 1
                 except Exception as e:
                     print(f"移动文件失败 {file_name}: {e}")

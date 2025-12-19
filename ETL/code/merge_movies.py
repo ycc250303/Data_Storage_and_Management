@@ -37,7 +37,7 @@ def removeVersionFromTitle():
     raw_data['Title'] = raw_data['Title'].apply(remove_version_info)
     
     # 将处理后的数据保存到新文件
-    raw_data.to_csv(OUTPUT_CSV_FILE, index=False, encoding='utf-8')
+    raw_data.to_csv(OUTPUT_CSV_FILE, index=False, encoding='utf-8', quoting=3)
     print("去除电影版本信息完成...")
 
 
@@ -58,17 +58,19 @@ def merge_movies():
     # 2.去除ASIN重的数据
     df.drop_duplicates(subset=['ASIN'], keep='first', inplace=True)
 
-    # 3. 将 Title 转换为小写以便统一
-    df['Title'] = df['Title'].str.lower().str.strip()
+    # 3. 保留原始标题，创建小写版本用于比较
+    df['Title_Original'] = df['Title']
+    df['Title_Lower'] = df['Title'].str.lower().str.strip()
 
-    # 4. 处理 Directors 列，填充缺失值为 'unknown'，并转换为小写
+    # 4. 处理 Directors 列，保留原始值，创建小写版本用于比较
+    df['Directors_Original'] = df['Directors']
     df['Directors'] = df['Directors'].fillna('unknown').str.lower().str.strip()
 
     # 5. 记录原始顺序
     df = df.reset_index().rename(columns={'index': 'original_order'})
 
-    # 6. 基于 Title 和 Directors 进行分组，认为同组的为同一部电影
-    grouped = df.groupby(['Title', 'Directors'])
+    # 6. 基于 Title_Lower 和 Directors 进行分组，认为同组的为同一部电影
+    grouped = df.groupby(['Title_Lower', 'Directors'])
 
     # 7. 创建去重后的数据，保留每组的第一条记录
     deduped_df = grouped.first().reset_index()
@@ -96,14 +98,19 @@ def merge_movies():
     # 9. 排序去重后的数据按照 original_order
     deduped_df = deduped_df.sort_values('original_order')
 
-    # 10. 获取原始列顺序
+    # 10. 恢复原始标题和导演名称并删除临时列
+    deduped_df['Title'] = deduped_df['Title_Original']
+    deduped_df['Directors'] = deduped_df['Directors_Original']
+    deduped_df = deduped_df.drop(['Title_Original', 'Title_Lower', 'Directors_Original'], axis=1)
+
+    # 11. 获取原始列顺序
     original_columns = pd.read_csv(OUTPUT_CSV_FILE, nrows=0).columns.tolist()
 
     # 确保去重后的数据按原始顺序排列，去掉 'original_order'
     deduped_df = deduped_df[original_columns]
 
     # 保存去重后的数据
-    deduped_df.to_csv(OUTPUT_MERGED_FILE, index=False, encoding='utf-8')
+    deduped_df.to_csv(OUTPUT_MERGED_FILE, index=False, encoding='utf-8', quoting=3)
 
     # 删除中间文件
     if os.path.exists(OUTPUT_CSV_FILE):

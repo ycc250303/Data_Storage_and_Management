@@ -8,8 +8,6 @@ ETL/csvs/
 
 data/
 
-backend/
-
 .csv
 .txt
 .pkl

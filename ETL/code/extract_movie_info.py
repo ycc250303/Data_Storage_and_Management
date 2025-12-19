@@ -156,7 +156,7 @@ class Parser:
 
         # 获取电影风格
         genre = page.xpath('normalize-space(//*[@id="wayfinding-breadcrumbs_feature_div"]//a[@aria-current="page"]/text())')
-        if genre:
+        if genre and genre != "Featured Categories":
             info.genres = genre
 
         # 获取电影语言

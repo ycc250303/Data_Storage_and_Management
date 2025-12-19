@@ -13,7 +13,7 @@ def removeRedundantMarks():
             raw_data[column] = raw_data[column].str.replace('\"', '')
 
     # 将处理后的数据保存到新文件
-    raw_data.to_csv('../movie_info_marks_cleaned.csv', index=False, encoding='utf-8')
+    raw_data.to_csv('../movie_info_marks_cleaned.csv', index=False, encoding='utf-8', quoting=3)
 
     print("去除多余引号完成...")
 

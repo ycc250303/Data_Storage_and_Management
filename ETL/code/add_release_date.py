@@ -23,7 +23,7 @@ def addReleaseDate():
                 formatted_date = convert_timestamp_to_date(review_time)
                 output.at[index, "Release date"] = formatted_date
 
-    output.to_csv(OUTPUT_MOVIE_FILE, index=False, encoding="utf-8")
+    output.to_csv(OUTPUT_MOVIE_FILE, index=False, encoding="utf-8", quoting=3)
 
 addReleaseDate()
 print("电影上映时间补充完成")
