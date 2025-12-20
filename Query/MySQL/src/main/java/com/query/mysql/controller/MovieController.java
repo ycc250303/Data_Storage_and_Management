@@ -18,10 +18,28 @@ public class MovieController {
     @Autowired
     private MovieService movieService;
 
-    @GetMapping("/versions")
-    public ResponseEntity<List<Map<String, Object>>> getMovieEditions(
-            @RequestParam String movieTitle
-    ){
+    @GetMapping("/editions")
+    public ResponseEntity<List<Map<String, Object>>> getMovieEditionsByMovieTitle(
+            @RequestParam String movieTitle) {
         return ResponseEntity.ok(movieService.getMovieEditions(movieTitle));
-    };
+    }
+
+    @GetMapping("/edition-count")
+    public ResponseEntity<List<Map<String, Object>>> getMovieEditionCountByMovieTitle(
+            @RequestParam String movieTitle) {
+        return ResponseEntity.ok(movieService.getMovieEditionCount(movieTitle));
+    }
+
+    @GetMapping("/genre-count")
+    public ResponseEntity<List<Map<String, Object>>> getMovieCountByGenre(@RequestParam String movieGenre) {
+        return ResponseEntity.ok(movieService.getMovieCountByGenre(movieGenre));
+    }
+
+    /**
+     * 根据电影类别名称获取电影名称列表
+     */
+    @GetMapping("/by-genre")
+    public ResponseEntity<List<Map<String, Object>>> getMoviesByGenreName(@RequestParam String movieGenre) {
+        return ResponseEntity.ok(movieService.getMoviesByGenreName(movieGenre));
+    }
 }

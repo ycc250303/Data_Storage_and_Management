@@ -62,10 +62,4 @@ public class QueryLog implements Serializable {
      * 查询失败时的错误信息
      */
     private String errorMessage;
-
-    /**
-     * 返回的行数
-     */
-    private Integer rowsReturned;
 }
-

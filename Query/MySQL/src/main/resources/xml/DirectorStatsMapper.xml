@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.datawarehouse.MySQL.mapper.DirectorStatsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.datawarehouse.MySQL.entity.DirectorStats">
+        <id column="director_id" property="directorId" />
+        <result column="director_name" property="directorName" />
+        <result column="movie_count" property="movieCount" />
+        <result column="avg_score" property="avgScore" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        director_id, director_name, movie_count, avg_score
+    </sql>
+
+</mapper>
+

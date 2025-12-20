@@ -14,7 +14,7 @@ MOVIE_REVIEW_NUM_FILE = "../../data/etl/review_num.csv"
 MOVIE_REVIEW_INFO_FILE = "../../movies.txt"
 
 # 异步模式配置（优化后，平衡性能与稳定性）
-ASYNC_MAX_CONCURRENT = 10  # 最大并发数（进一步降低避免锁等待超时）
+ASYNC_MAX_CONCURRENT = 15  # 最大并发数
 ASYNC_POOL_SIZE = 15  # 异步连接池大小
 ASYNC_BATCH_SIZE = 50  # 每批处理的数据量
 MAX_RETRY = 5  # 最大重试次数（适用于死锁和锁超时）
@@ -214,9 +214,16 @@ class AsyncLoadDataTool:
             await cursor.execute(sql, (review_num, asin))
             return cursor.rowcount > 0
     
-    async def loadMovieReview(self, review, conn):
+    async def loadMovieReview(self, review, conn, asin_map=None):
         """异步加载单个电影评论"""
-        movie_id = await self.getMovieIdByAsin(review.get('product/productId'), conn)
+        asin = review.get('product/productId')
+        
+        # 优先使用映射字典，避免查询数据库
+        if asin_map is not None:
+            movie_id = asin_map.get(asin)
+        else:
+            movie_id = await self.getMovieIdByAsin(asin, conn)
+        
         if not movie_id:
             return False
         
@@ -235,7 +242,7 @@ class AsyncLoadDataTool:
                 review.get('review/profileName'),
                 review.get('review/helpfulness'),
                 safe_int(review.get('review/score', 0)),
-                safe_int(review.get('review/time', 0)),
+                review.get('review/time', 0),
                 review.get('review/summary'),
                 review.get('review/text')
             ))
@@ -257,6 +264,23 @@ class AsyncLoadDataTool:
                     current[k.strip()] = v.strip()
         if current:
             yield current
+    
+    def countReviews(self, file_path):
+        """快速统计评论总数"""
+        count = 0
+        current_has_data = False
+        with open(file_path, 'r', encoding='latin-1', errors='replace') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    if current_has_data:
+                        count += 1
+                        current_has_data = False
+                elif ':' in line:
+                    current_has_data = True
+        if current_has_data:
+            count += 1
+        return count
     
     async def loadOneMovie(self, row, semaphore, retry_count=0):
         """异步加载单个电影（类似爬虫的 fetch_page）- 支持死锁重试"""
@@ -363,19 +387,20 @@ class AsyncLoadDataTool:
                             print(f"❌ 评论数更新失败: {row.get('productID', 'Unknown')} - {e}")
                         return False
     
-    async def loadOneReview(self, review, semaphore, retry_count=0):
+    async def loadOneReview(self, review, semaphore, asin_map=None, retry_count=0):
         """异步加载单个评论 - 支持死锁重试"""
         async with semaphore:
             async with self.pool.acquire() as conn:
                 try:
-                    success = await self.loadMovieReview(review, conn)
+                    success = await self.loadMovieReview(review, conn, asin_map)
                     
                     await conn.commit()
                     
                     if success:
                         async with self.lock:
                             self.progress_count += 1
-                            if self.progress_count % 1000 == 0:
+                            # 增加进度输出频率，让用户知道程序在运行
+                            if self.progress_count % 500 == 0:
                                 print(f"⏳ 已加载: {self.progress_count} 条评论")
                     
                     return True
@@ -392,7 +417,7 @@ class AsyncLoadDataTool:
                         jitter = random.uniform(0, 0.5)
                         wait_time = base_wait + jitter
                         await asyncio.sleep(wait_time)
-                        return await self.loadOneReview(review, semaphore, retry_count + 1)
+                        return await self.loadOneReview(review, semaphore, asin_map, retry_count + 1)
                     else:
                         async with self.lock:
                             self.failed_count += 1
@@ -415,11 +440,24 @@ class AsyncLoadDataTool:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return sum(1 for r in results if r is True)
     
-    async def processReviewBatch(self, batch, semaphore):
+    async def processReviewBatch(self, batch, semaphore, asin_map=None):
         """处理一批评论数据"""
-        tasks = [self.loadOneReview(review, semaphore) for review in batch]
+        tasks = [self.loadOneReview(review, semaphore, asin_map) for review in batch]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return sum(1 for r in results if r is True)
+    
+    async def buildAsinToMovieIdMap(self):
+        """构建ASIN到movie_id的映射字典（避免重复查询）"""
+        print(f"📦 正在构建ASIN映射字典...")
+        asin_map = {}
+        async with self.pool.acquire() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute("SELECT id, movie_asin FROM movies")
+                rows = await cursor.fetchall()
+                for row in rows:
+                    asin_map[row[1]] = row[0]
+        print(f"✅ 映射字典构建完成，共 {len(asin_map)} 部电影\n")
+        return asin_map
     
     async def loadDataAsync(self, max_movies=None, max_review_nums=None, max_reviews=None):
         """异步加载数据（主函数，类似爬虫的 main）"""
@@ -536,15 +574,21 @@ class AsyncLoadDataTool:
             print(f"\n{'='*60}")
             print(f"💬 第三步：加载电影评论")
             print(f"{'='*60}")
-            print(f"📖 正在读取评论数据...")
             
-            reviews = []
-            for i, review in enumerate(self.parseMovieReview(MOVIE_REVIEW_INFO_FILE), 1):
-                reviews.append(review)
-                if max_reviews and i >= max_reviews:
-                    break
+            # 构建ASIN映射字典（关键优化：避免790万次查询）
+            asin_map = await self.buildAsinToMovieIdMap()
             
-            print(f"✅ 共读取 {len(reviews)} 条评论数据\n")
+            # 统计评论总数
+            print(f"📊 正在统计评论总数...")
+            total_reviews_in_file = self.countReviews(MOVIE_REVIEW_INFO_FILE)
+            expected_count = min(max_reviews, total_reviews_in_file) if max_reviews else total_reviews_in_file
+            print(f"✅ 文件中共有 {total_reviews_in_file:,} 条评论")
+            if max_reviews:
+                print(f"   本次将处理 {expected_count:,} 条评论\n")
+            else:
+                print(f"   本次将处理全部评论\n")
+            
+            print(f"📖 开始流式处理评论数据...")
             
             # 重置计数器
             self.progress_count = 0
@@ -552,26 +596,41 @@ class AsyncLoadDataTool:
             self.retry_count = 0
             
             total_success = 0
+            total_count = 0
+            batch = []
             
-            for i in range(0, len(reviews), ASYNC_BATCH_SIZE):
-                batch = reviews[i:i + ASYNC_BATCH_SIZE]
-                success_count = await self.processReviewBatch(batch, semaphore)
-                total_success += success_count
+            # 流式处理（不一次性加载到内存）
+            for review in self.parseMovieReview(MOVIE_REVIEW_INFO_FILE):
+                batch.append(review)
+                total_count += 1
                 
-                if i + ASYNC_BATCH_SIZE < len(reviews):
+                # 达到批处理大小时处理一批
+                if len(batch) >= ASYNC_BATCH_SIZE:
+                    success_count = await self.processReviewBatch(batch, semaphore, asin_map)
+                    total_success += success_count
+                    batch = []
                     await asyncio.sleep(0.05)
+                
+                # 达到最大处理数量时退出
+                if max_reviews and total_count >= max_reviews:
+                    break
+            
+            # 处理最后一批
+            if batch:
+                success_count = await self.processReviewBatch(batch, semaphore, asin_map)
+                total_success += success_count
             
             print(f"\n{'='*60}")
             print(f"✅ 评论数据加载完成！")
             print(f"{'='*60}")
             print(f"📊 统计信息:")
-            print(f"   - 总数: {len(reviews)}")
+            print(f"   - 总数: {total_count}")
             print(f"   - 成功: {total_success}")
             if self.failed_count > 0:
                 print(f"   - 失败: {self.failed_count}")
             if self.retry_count > 0:
                 print(f"   - 重试次数: {self.retry_count}")
-            success_rate = (total_success / len(reviews) * 100) if len(reviews) > 0 else 0
+            success_rate = (total_success / total_count * 100) if total_count > 0 else 0
             print(f"   - 成功率: {success_rate:.2f}%")
             print(f"{'='*60}")
         
