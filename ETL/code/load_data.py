@@ -459,7 +459,8 @@ class AsyncLoadDataTool:
         print(f"✅ 映射字典构建完成，共 {len(asin_map)} 部电影\n")
         return asin_map
     
-    async def loadDataAsync(self, max_movies=None, max_review_nums=None, max_reviews=None):
+    async def loadDataAsync(self,min_movies=None, min_review_nums=None, min_reviews=None, 
+                            max_movies=None, max_review_nums=None, max_reviews=None):
         """异步加载数据（主函数，类似爬虫的 main）"""
         print(f"\n{'='*60}")
         print(f"🚀 异步并发数据加载工具")
@@ -483,13 +484,20 @@ class AsyncLoadDataTool:
             print(f"{'='*60}")
             print(f"📖 正在读取电影数据...")
             rows = []
+            skipped_count = 0
             with open(MOVIE_INFO_DATA_FILE, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for i, row in enumerate(reader, 1):
+                    # 跳过前 min_movies 条记录（断点续传）
+                    if min_movies and i <= min_movies:
+                        skipped_count += 1
+                        continue
                     rows.append(dict(row))
                     if max_movies and i >= max_movies:
                         break
             
+            if skipped_count > 0:
+                print(f"⏭️  已跳过前 {skipped_count} 部电影（断点续传）")
             print(f"✅ 共读取 {len(rows)} 部电影数据\n")
             
             # 重置计数器
@@ -531,13 +539,20 @@ class AsyncLoadDataTool:
             print(f"📖 正在读取评论数量数据...")
             
             review_num_rows = []
+            skipped_count = 0
             with open(MOVIE_REVIEW_NUM_FILE, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for i, row in enumerate(reader, 1):
+                    # 跳过前 min_review_nums 条记录（断点续传）
+                    if min_review_nums and i <= min_review_nums:
+                        skipped_count += 1
+                        continue
                     review_num_rows.append(dict(row))
                     if max_review_nums and i >= max_review_nums:
                         break
             
+            if skipped_count > 0:
+                print(f"⏭️  已跳过前 {skipped_count} 条评论数量（断点续传）")
             print(f"✅ 共读取 {len(review_num_rows)} 条评论数量数据\n")
             
             # 重置计数器
@@ -597,12 +612,22 @@ class AsyncLoadDataTool:
             
             total_success = 0
             total_count = 0
+            skipped_count = 0
             batch = []
             
             # 流式处理（不一次性加载到内存）
             for review in self.parseMovieReview(MOVIE_REVIEW_INFO_FILE):
-                batch.append(review)
                 total_count += 1
+                
+                # 跳过前 min_reviews 条记录（断点续传）
+                if min_reviews and total_count <= min_reviews:
+                    skipped_count += 1
+                    # 每跳过1000条打印一次进度
+                    if skipped_count % 1000 == 0:
+                        print(f"⏭️  正在跳过记录: {skipped_count}/{min_reviews}")
+                    continue
+                
+                batch.append(review)
                 
                 # 达到批处理大小时处理一批
                 if len(batch) >= ASYNC_BATCH_SIZE:
@@ -615,6 +640,9 @@ class AsyncLoadDataTool:
                 if max_reviews and total_count >= max_reviews:
                     break
             
+            if skipped_count > 0:
+                print(f"⏭️  已跳过前 {skipped_count} 条评论（断点续传）")
+            
             # 处理最后一批
             if batch:
                 success_count = await self.processReviewBatch(batch, semaphore, asin_map)
@@ -624,13 +652,17 @@ class AsyncLoadDataTool:
             print(f"✅ 评论数据加载完成！")
             print(f"{'='*60}")
             print(f"📊 统计信息:")
-            print(f"   - 总数: {total_count}")
+            print(f"   - 总读取数: {total_count}")
+            if skipped_count > 0:
+                print(f"   - 已跳过: {skipped_count}")
+                print(f"   - 实际处理: {total_count - skipped_count}")
             print(f"   - 成功: {total_success}")
             if self.failed_count > 0:
                 print(f"   - 失败: {self.failed_count}")
             if self.retry_count > 0:
                 print(f"   - 重试次数: {self.retry_count}")
-            success_rate = (total_success / total_count * 100) if total_count > 0 else 0
+            actual_processed = total_count - skipped_count
+            success_rate = (total_success / actual_processed * 100) if actual_processed > 0 else 0
             print(f"   - 成功率: {success_rate:.2f}%")
             print(f"{'='*60}")
         
@@ -647,14 +679,28 @@ if __name__ == "__main__":
         loader = AsyncLoadDataTool()
         
         # 参数说明：
-        # max_movies=None 表示加载所有电影数据
-        # max_review_nums=None 表示更新所有电影的评论数量
-        # max_reviews=None 表示加载所有评论数据
-        # 设置为 0 表示跳过该步骤
+        # min_movies: 跳过前N部电影（断点续传），默认None表示从头开始
+        # max_movies: 最多处理到第N部电影，None表示处理所有，0表示跳过该步骤
+        # min_review_nums: 跳过前N条评论数量（断点续传）
+        # max_review_nums: 最多处理到第N条评论数量，None表示处理所有，0表示跳过
+        # min_reviews: 跳过前N条评论（断点续传）
+        # max_reviews: 最多处理到第N条评论，None表示处理所有，0表示跳过
+        # 
+        # 使用示例：
+        # 1. 全新加载所有数据：
+        #    min_movies=None, max_movies=None, min_review_nums=None, max_review_nums=None, min_reviews=None, max_reviews=None
+        # 2. 断点续传（从第1000条评论继续）：
+        #    min_movies=0, max_movies=0, min_review_nums=0, max_review_nums=0, min_reviews=1000, max_reviews=None
+        # 3. 处理指定范围（处理第1000-2000条评论）：
+        #    min_movies=0, max_movies=0, min_review_nums=0, max_review_nums=0, min_reviews=1000, max_reviews=2000
+        
         asyncio.run(loader.loadDataAsync(
-            max_movies=0,       # 加载所有电影
-            max_review_nums=0,  # 更新所有评论数量
-            max_reviews=None       # 加载所有评论
+            min_movies=0,       # 从第N部电影开始（断点续传）
+            max_movies=0,          # 加载到第N部电影
+            min_review_nums=0,  # 从第N条评论数量开始（断点续传）
+            max_review_nums=0,     # 更新到第N条评论数量
+            min_reviews=1384349,      # 从第N条评论开始（断点续传）
+            max_reviews=None       # 加载到第N条评论
         ))
         
         elapsed = time.time() - start_time
