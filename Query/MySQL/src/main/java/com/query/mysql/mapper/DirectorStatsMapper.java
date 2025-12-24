@@ -4,7 +4,6 @@ import com.query.mysql.entity.DirectorStats;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 import java.util.Map;
@@ -23,9 +22,6 @@ public interface DirectorStatsMapper extends BaseMapper<DirectorStats> {
     /**
      * 模糊匹配查询导演导演电影数量
      */
-    @Select("SELECT director_name, movie_count,avg_score " +
-            "FROM director_stats " +
-            "WHERE director_name LIKE CONCAT('%', #{directorName}, '%')")
     List<Map<String, Object>> getDirectorMovieCountByFuzzyName(@Param("directorName") String directorName);
 
 }

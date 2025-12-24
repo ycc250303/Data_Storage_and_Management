@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.datawarehouse.MySQL.mapper.DirectorsMapper">
+<mapper namespace="com.query.mysql.mapper.DirectorsMapper">
 
     <!-- 通用查询映射结果 -->
-    <resultMap id="BaseResultMap" type="com.datawarehouse.MySQL.entity.Directors">
+    <resultMap id="BaseResultMap" type="com.query.mysql.entity.Directors">
         <id column="id" property="id" />
         <result column="director_uuid" property="directorUuid" />
         <result column="name" property="name" />
@@ -13,5 +13,15 @@
     <sql id="Base_Column_List">
         id, director_uuid, name
     </sql>
+
+    <!-- 精确匹配查询导演导演的电影列表 -->
+    <select id="getDirectorMoviesByExactName" resultType="java.util.Map">
+        SELECT DISTINCT m.movie_title 
+        FROM data_warehouse.directors d 
+        JOIN data_warehouse.movie_directors md ON d.id = md.director_id 
+        JOIN data_warehouse.movies m ON md.movie_id = m.id 
+        WHERE d.name = #{directorName} 
+        ORDER BY m.movie_title
+    </select>
 
 </mapper>

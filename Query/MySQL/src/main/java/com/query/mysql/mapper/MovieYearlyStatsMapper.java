@@ -4,7 +4,6 @@ import com.query.mysql.entity.MovieYearlyStats;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 import java.util.Map;
@@ -20,8 +19,6 @@ import java.util.Map;
 @Mapper
 public interface MovieYearlyStatsMapper extends BaseMapper<MovieYearlyStats> {
 
-    @Select("SELECT release_year, total_movies, avg_score " +
-            "FROM movie_yearly_stats WHERE release_year = #{year}")
     List<Map<String, Object>> getMovieCountByYear(@Param("year") int year);
 
 

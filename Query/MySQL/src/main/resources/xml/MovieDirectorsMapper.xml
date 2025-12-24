@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.datawarehouse.MySQL.mapper.MovieDirectorsMapper">
+<mapper namespace="com.query.mysql.mapper.MovieDirectorsMapper">
 
     <!-- 通用查询映射结果 -->
-    <resultMap id="BaseResultMap" type="com.datawarehouse.MySQL.entity.MovieDirectors">
+    <resultMap id="BaseResultMap" type="com.query.mysql.entity.MovieDirectors">
         <id column="movie_id" property="movieId" />
         <id column="director_id" property="directorId" />
     </resultMap>
