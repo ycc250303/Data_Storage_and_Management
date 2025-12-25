@@ -1,4 +1,4 @@
-package com.query.mysql.entity;
+package com.query.common.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -63,3 +63,4 @@ public class QueryLog implements Serializable {
      */
     private String errorMessage;
 }
+

@@ -1,6 +1,6 @@
-package com.query.mysql.service;
+package com.query.common.service;
 
-import com.query.mysql.entity.QueryLog;
+import com.query.common.entity.QueryLog;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

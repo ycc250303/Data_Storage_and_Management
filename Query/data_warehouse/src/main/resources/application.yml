@@ -1,0 +1,10 @@
+spring:
+  application:
+    name :backend
+  config:
+    import: optional:classpath:/application-local.yml
+
+mybatis-plus:
+  mapper-locations: classpath:/xml/*.xml
+  configuration:
+    map-underscore-to-camel-case: true

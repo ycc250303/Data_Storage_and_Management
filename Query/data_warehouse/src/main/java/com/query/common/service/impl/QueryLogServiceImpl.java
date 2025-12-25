@@ -1,8 +1,8 @@
-package com.query.mysql.service.impl;
+package com.query.common.service.impl;
 
-import com.query.mysql.entity.QueryLog;
-import com.query.mysql.mapper.QueryLogMapper;
-import com.query.mysql.service.QueryLogService;
+import com.query.common.entity.QueryLog;
+import com.query.common.mapper.QueryLogMapper;
+import com.query.common.service.QueryLogService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -28,3 +28,4 @@ public class QueryLogServiceImpl extends ServiceImpl<QueryLogMapper, QueryLog> i
         }
     }
 }
+

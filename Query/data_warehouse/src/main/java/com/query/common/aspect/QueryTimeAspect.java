@@ -1,9 +1,10 @@
-package com.query.mysql.config;
+package com.query.common.aspect;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.query.mysql.controller.QueryResponse;
-import com.query.mysql.entity.QueryLog;
-import com.query.mysql.service.QueryLogService;
+import com.query.common.model.QueryResponse;
+import com.query.common.entity.QueryLog;
+import com.query.common.service.QueryLogService;
+import com.query.common.config.SqlExecutionTimeInterceptor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -31,9 +32,9 @@ public class QueryTimeAspect {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 拦截所有Controller包下的方法
+     * 拦截所有 com.query 子包下的 Controller 方法
      */
-    @Around("execution(* com.query.mysql.controller.*.*(..))")
+    @Around("execution(* com.query.*.controller.*.*(..))")
     public Object aroundController(ProceedingJoinPoint joinPoint) throws Throwable {
         // 记录总开始时间
         long totalStartTime = System.currentTimeMillis();
@@ -210,6 +211,7 @@ public class QueryTimeAspect {
             }
 
             // 转换为JSON字符串
+            // 注意：这里需要考虑循环引用等复杂情况，简单起见直接转换
             String json = objectMapper.writeValueAsString(paramMap);
 
             // 限制总长度

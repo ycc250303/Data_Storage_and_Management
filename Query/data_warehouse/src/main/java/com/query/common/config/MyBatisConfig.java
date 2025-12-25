@@ -1,4 +1,4 @@
-package com.query.mysql.config;
+package com.query.common.config;
 
 import org.apache.ibatis.plugin.Interceptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,3 +22,4 @@ public class MyBatisConfig {
         return new Interceptor[]{sqlExecutionTimeInterceptor};
     }
 }
+

@@ -1,15 +1,18 @@
-package com.query.mysql;
+package com.query;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableAsync
-public class MySqlApplication {
+@MapperScan("com.query.**.mapper")
+public class QueryApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(MySqlApplication.class, args);
+        SpringApplication.run(QueryApplication.class, args);
     }
 
 }
+

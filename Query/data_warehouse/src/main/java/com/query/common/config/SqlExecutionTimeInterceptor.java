@@ -1,4 +1,4 @@
-package com.query.mysql.config;
+package com.query.common.config;
 
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
@@ -117,3 +117,4 @@ public class SqlExecutionTimeInterceptor implements Interceptor {
         SQL_STATEMENTS.remove();
     }
 }
+

@@ -1,6 +1,6 @@
-package com.query.mysql.mapper;
+package com.query.common.mapper;
 
-import com.query.mysql.entity.QueryLog;
+import com.query.common.entity.QueryLog;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -16,4 +16,3 @@ import org.apache.ibatis.annotations.Mapper;
 public interface QueryLogMapper extends BaseMapper<QueryLog> {
 
 }
-
