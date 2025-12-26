@@ -10,4 +10,6 @@ data/
 
 .csv
 .txt
-.pkl
+.pklnode_modules/ 
+dist/ 
+.env 
