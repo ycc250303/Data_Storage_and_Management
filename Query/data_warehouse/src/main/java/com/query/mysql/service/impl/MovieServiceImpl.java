@@ -1,13 +1,17 @@
 package com.query.mysql.service.impl;
 
+import com.query.mysql.dto.MovieDetailDto;
+import com.query.mysql.dto.MovieSearchDto;
 import com.query.mysql.mapper.*;
 import com.query.mysql.entity.MovieEditions;
 import com.query.mysql.entity.Movies;
 import com.query.mysql.service.MovieService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +27,7 @@ import java.util.stream.Stream;
  * @author Data Warehouse Team
  * @since 2025-12-13
  */
+@Slf4j
 @Service
 public class MovieServiceImpl extends ServiceImpl<MoviesMapper, Movies> implements MovieService {
     @Autowired
@@ -79,6 +84,64 @@ public class MovieServiceImpl extends ServiceImpl<MoviesMapper, Movies> implemen
                     return map;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MovieDetailDto> getMoviesByCombinedConditions(MovieSearchDto dto) {
+        // 创建一个新的DTO对象，用于传递给mapper，避免修改原始DTO
+        MovieSearchDto searchDto = new MovieSearchDto();
+        searchDto.setMovieTitle(dto.getMovieTitle());
+        searchDto.setActorName(dto.getActorName());
+        searchDto.setDirectorName(dto.getDirectorName());
+        searchDto.setMovieGenre(dto.getMovieGenre());
+        searchDto.setStartYear(dto.getStartYear());
+        searchDto.setEndYear(dto.getEndYear());
+        searchDto.setMonth(dto.getMonth());
+        searchDto.setWeekday(dto.getWeekday());
+        searchDto.setDay(dto.getDay());
+        searchDto.setMinScore(dto.getMinScore());
+        searchDto.setMaxScore(dto.getMaxScore());
+
+        // 特殊处理：当page为-1时，表示查询全部结果
+        if (dto.getPage() == -1) {
+            // 查询全部结果，不分页
+            searchDto.setPage(0);
+            searchDto.setSize(2147483647); // 设置一个很大的值，确保获取所有结果，与XML中的条件一致
+        } else {
+            // 普通分页查询
+            int offset = dto.getPage() * dto.getSize();
+            searchDto.setPage(offset);
+            searchDto.setSize(dto.getSize());
+        }
+
+        List<Map<String, Object>> results = baseMapper.getMoviesByCombinedConditions(searchDto);
+        if (results == null || results.isEmpty()) {
+            return List.of();
+        }
+
+        // 使用传统for循环替代lambda表达式，便于调试
+        List<MovieDetailDto> movieDetailDtoList = new ArrayList<>();
+
+        for (Map<String, Object> record : results) {
+            MovieDetailDto movieDetail = new MovieDetailDto();
+            // 增加空值检查
+            log.info("Processing record: {}", record);
+            log.info("MovieAsin: {}", record.get("movieAsin"));
+            movieDetail.setMovieAsin(record.get("movieAsin") != null ? record.get("movieAsin").toString()
+                    : "" +
+                            "");
+            movieDetail.setMovieTitle(record.get("movieTitle") != null ? (String) record.get("movieTitle") : "");
+            movieDetail.setMovieScore(record.get("movieScore") != null ? (float) record.get("movieScore") : 0.0f);
+            movieDetail.setActors(record.get("actors") != null ? (String) record.get("actors") : "");
+            movieDetail.setDirectors(record.get("directors") != null ? (String) record.get("directors") : "");
+            movieDetail.setMovieGenre(record.get("movieGenre") != null ? (String) record.get("movieGenre") : "");
+            movieDetail.setDate(record.get("date") != null ? (String) record.get("date") : "");
+            movieDetail.setEdition(record.get("edition") != null ? (String) record.get("edition") : "");
+            movieDetailDtoList.add(movieDetail);
+        }
+
+        log.info("Final result list size: {}", movieDetailDtoList.size());
+        return movieDetailDtoList;
     }
 
     /**

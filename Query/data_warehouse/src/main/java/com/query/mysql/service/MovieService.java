@@ -1,5 +1,7 @@
 package com.query.mysql.service;
 
+import com.query.mysql.dto.MovieDetailDto;
+import com.query.mysql.dto.MovieSearchDto;
 import com.query.mysql.entity.Movies;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -36,8 +38,16 @@ public interface MovieService extends IService<Movies> {
     /**
      * 根据电影类别名称获取电影名称列表
      *
-     * @param genreName 电影类别名称
+     * @param movieGenre 电影类别名称
      * @return 电影名称列表
      */
     List<Map<String, Object>> getMoviesByGenreName(String movieGenre);
+
+    /**
+     * 组合查询电影信息
+     *
+     * @param dto 查询条件
+     * @return 电影详情列表
+     */
+    List<MovieDetailDto> getMoviesByCombinedConditions(MovieSearchDto dto);
 }

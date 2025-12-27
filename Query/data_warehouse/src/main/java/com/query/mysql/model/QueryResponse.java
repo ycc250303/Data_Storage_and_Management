@@ -1,4 +1,4 @@
-package com.query.common.model;
+package com.query.mysql.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

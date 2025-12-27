@@ -1,7 +1,8 @@
-package com.query.common.service;
+package com.query.mysql.service;
 
-import com.query.common.entity.QueryLog;
+import com.query.mysql.entity.QueryLog;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.scheduling.annotation.Async;
 
 /**
  * 查询日志服务接口

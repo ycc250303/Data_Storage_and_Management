@@ -1,9 +1,13 @@
 package com.query.mysql.controller;
 
+import com.query.mysql.dto.MovieDetailDto;
+import com.query.mysql.dto.MovieSearchDto;
 import com.query.mysql.service.MovieService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,5 +45,16 @@ public class MovieController {
     @GetMapping("/by-genre")
     public ResponseEntity<List<Map<String, Object>>> getMoviesByGenreName(@RequestParam String movieGenre) {
         return ResponseEntity.ok(movieService.getMoviesByGenreName(movieGenre));
+    }
+
+    /**
+     * 组合查询电影信息
+     * 支持多条件查询：电影标题、导演、演员、类型、日期范围、评分范围等
+     */
+    @PostMapping("/search")
+    public ResponseEntity<List<MovieDetailDto>> getMoviesByCombinedConditions(
+            @RequestBody MovieSearchDto searchDto) {
+
+        return ResponseEntity.ok(movieService.getMoviesByCombinedConditions(searchDto));
     }
 }

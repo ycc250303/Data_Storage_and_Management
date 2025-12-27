@@ -1,9 +1,9 @@
-package com.query.common.aspect;
+package com.query.mysql.aspect;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.query.common.model.QueryResponse;
-import com.query.common.entity.QueryLog;
-import com.query.common.service.QueryLogService;
+import com.query.mysql.model.QueryResponse;
+import com.query.mysql.entity.QueryLog;
+import com.query.mysql.service.QueryLogService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -91,7 +91,6 @@ public class QueryTimeAspect {
                 // 保存日志
                 saveQueryLog(queryTime, queryParams, totalTime, queryType,
                         queryResult, errorMessage);
-
                 return ResponseEntity.ok(queryResponse);
             }
 
@@ -101,7 +100,6 @@ public class QueryTimeAspect {
             // 保存日志
             saveQueryLog(queryTime, queryParams, totalTime, queryType,
                     queryResult, errorMessage);
-
             return queryResponse;
 
         } catch (Throwable e) {

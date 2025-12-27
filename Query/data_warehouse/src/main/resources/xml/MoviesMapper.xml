@@ -15,4 +15,153 @@
     <sql id="Base_Column_List">
         id, movie_asin, movie_title, score, review_num
     </sql>
+    
+    <!-- 电影详情结果映射 -->
+    <resultMap id="MovieDetailResultMap" type="java.util.Map">
+        <id column="movie_asin" property="movieAsin" />
+        <result column="movie_title" property="movieTitle" />
+        <result column="score" property="movieScore" />
+        <result column="actors" property="actors" />
+        <result column="directors" property="directors" />
+        <result column="genres" property="movieGenre" />
+        <result column="release_date" property="date" />
+        <result column="editions" property="edition" />
+    </resultMap>
+    
+    <!-- 组合查询电影信息 -->
+    <select id="getMoviesByCombinedConditions" resultMap="MovieDetailResultMap">
+        SELECT 
+            m.movie_asin,
+            m.movie_title,
+            m.score,
+            GROUP_CONCAT(DISTINCT a.name ORDER BY a.name SEPARATOR ', ') AS actors,
+            GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR ', ') AS directors,
+            GROUP_CONCAT(DISTINCT mg.genre ORDER BY mg.genre SEPARATOR ', ') AS genres,
+            CONCAT(rd.year, '-', LPAD(rd.month, 2, '0'), '-', LPAD(rd.day, 2, '0')) AS release_date,
+            GROUP_CONCAT(DISTINCT me.edition ORDER BY me.edition SEPARATOR ', ') AS editions
+        FROM 
+            movies m
+        LEFT JOIN 
+            movie_actors ma ON m.id = ma.movie_id
+        LEFT JOIN 
+            actors a ON ma.actor_id = a.id
+        LEFT JOIN 
+            movie_directors md ON m.id = md.movie_id
+        LEFT JOIN 
+            directors d ON md.director_id = d.id
+        LEFT JOIN 
+            movie_genres mg ON m.id = mg.movie_id
+        LEFT JOIN 
+            release_dates rd ON m.id = rd.movie_id
+        LEFT JOIN 
+            movie_editions me ON m.id = me.movie_id
+        WHERE 
+            1=1
+        <if test="dto.movieTitle != null and dto.movieTitle != ''">
+            AND m.movie_title LIKE CONCAT('%', #{dto.movieTitle}, '%')
+        </if>
+        <if test="dto.actorName != null and dto.actorName != ''">
+            AND a.name LIKE CONCAT('%', #{dto.actorName}, '%')
+        </if>
+        <if test="dto.directorName != null and dto.directorName != ''">
+            AND d.name LIKE CONCAT('%', #{dto.directorName}, '%')
+        </if>
+        <if test="dto.movieGenre != null and dto.movieGenre != ''">
+            AND mg.genre = #{dto.movieGenre}
+        </if>
+        <if test="dto.startYear > 0">
+            AND rd.year &gt;= #{dto.startYear}
+        </if>
+        <if test="dto.endYear > 0">
+            AND rd.year &lt;= #{dto.endYear}
+        </if>
+        <if test="dto.month > 0">
+            AND rd.month = #{dto.month}
+        </if>
+        <if test="dto.day > 0">
+            AND rd.day = #{dto.day}
+        </if>
+        <if test="dto.minScore >= 0">
+            AND m.score &gt;= #{dto.minScore}
+        </if>
+        <if test="dto.maxScore > 0">
+            AND m.score &lt;= #{dto.maxScore}
+        </if>
+        GROUP BY 
+            m.id, m.movie_asin, m.movie_title, m.score, rd.year, rd.month, rd.day
+        ORDER BY 
+            m.movie_title
+        <!-- 根据size值判断是否需要分页 -->
+        <if test="dto.size &lt; 2147483647">
+        LIMIT 
+            #{dto.size} OFFSET #{dto.page}
+        </if>
+    </select>
+
+    <!-- 统计符合条件的电影总数 -->
+    <select id="countMoviesByCombinedConditions" resultType="int">
+        SELECT COUNT(DISTINCT m.id)
+        FROM 
+            movies m
+        LEFT JOIN 
+            movie_actors ma ON m.id = ma.movie_id
+        LEFT JOIN 
+            actors a ON ma.actor_id = a.id
+        LEFT JOIN 
+            movie_directors md ON m.id = md.movie_id
+        LEFT JOIN 
+            directors d ON md.director_id = d.id
+        LEFT JOIN 
+            movie_genres mg ON m.id = mg.movie_id
+        LEFT JOIN 
+            release_dates rd ON m.id = rd.movie_id
+        LEFT JOIN 
+            movie_editions me ON m.id = me.movie_id
+        WHERE 
+            1=1
+        <!-- 确保至少有一个有效的查询条件 -->
+        <if test="(dto.movieTitle != null and dto.movieTitle != '') or (dto.actorName != null and dto.actorName != '') or (dto.directorName != null and dto.directorName != '') or (dto.movieGenre != null and dto.movieGenre != '') or (dto.startYear > 0) or (dto.endYear > 0) or (dto.month > 0) or (dto.weekday > 0) or (dto.day > 0)">
+            AND (
+                (dto.movieTitle != null and dto.movieTitle != '') or
+                (dto.actorName != null and dto.actorName != '') or
+                (dto.directorName != null and dto.directorName != '') or
+                (dto.movieGenre != null and dto.movieGenre != '') or
+                (dto.startYear > 0) or
+                (dto.endYear > 0) or
+                (dto.month > 0) or
+                (dto.weekday > 0) or
+                (dto.day > 0)
+            )
+        </if>
+        <if test="dto.movieTitle != null and dto.movieTitle != ''">
+            AND m.movie_title LIKE CONCAT('%', #{dto.movieTitle}, '%')
+        </if>
+        <if test="dto.actorName != null and dto.actorName != ''">
+            AND a.name LIKE CONCAT('%', #{dto.actorName}, '%')
+        </if>
+        <if test="dto.directorName != null and dto.directorName != ''">
+            AND d.name LIKE CONCAT('%', #{dto.directorName}, '%')
+        </if>
+        <if test="dto.movieGenre != null and dto.movieGenre != ''">
+            AND mg.genre = #{dto.movieGenre}
+        </if>
+        <if test="dto.startYear > 0">
+            AND rd.year &gt;= #{dto.startYear}
+        </if>
+        <if test="dto.endYear > 0">
+            AND rd.year &lt;= #{dto.endYear}
+        </if>
+        <if test="dto.month > 0">
+            AND rd.month = #{dto.month}
+        </if>
+        <if test="dto.day > 0">
+            AND rd.day = #{dto.day}
+        </if>
+        <if test="dto.minScore >= 0">
+            AND m.score &gt;= #{dto.minScore}
+        </if>
+        <if test="dto.maxScore > 0">
+            AND m.score &lt;= #{dto.maxScore}
+        </if>
+    </select>
 </mapper>

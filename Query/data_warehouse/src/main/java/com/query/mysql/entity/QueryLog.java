@@ -1,4 +1,4 @@
-package com.query.common.entity;
+package com.query.mysql.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;

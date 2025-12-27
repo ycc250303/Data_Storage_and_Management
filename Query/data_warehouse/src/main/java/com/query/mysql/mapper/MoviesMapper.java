@@ -1,5 +1,6 @@
 package com.query.mysql.mapper;
 
+import com.query.mysql.dto.MovieSearchDto;
 import com.query.mysql.entity.Movies;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -18,4 +19,14 @@ import java.util.Map;
  */
 @Mapper
 public interface MoviesMapper extends BaseMapper<Movies> {
+
+    /**
+     * 组合查询电影信息
+     */
+    List<Map<String, Object>> getMoviesByCombinedConditions(@Param("dto") MovieSearchDto dto);
+
+    /**
+     * 统计符合条件的电影总数（用于分页）
+     */
+    int countMoviesByCombinedConditions(@Param("dto") MovieSearchDto dto);
 }
