@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.query.hive.mapper.MovieDenormalizationMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.query.hive.entity.MovieDenormalization">
+        <id column="movie_asin" property="movieAsin" />
+        <result column="movie_title" property="movieTitle" />
+        <result column="movie_score" property="movieScore" />
+        <result column="movie_genre" property="movieGenre" />
+        <result column="release_year" property="releaseYear" />
+        <result column="release_month" property="releaseMonth" />
+        <result column="release_day" property="releaseDay" />
+        <result column="release_quarter" property="releaseQuarter" />
+        <result column="release_weekday" property="releaseWeekday" />
+        <result column="actor_id_list" property="actorIdList" />
+        <result column="director_id_list" property="directorIdList" />
+        <result column="edition_list" property="editionList" />
+        <result column="actor_count" property="actorCount" />
+        <result column="director_count" property="directorCount" />
+        <result column="edition_count" property="editionCount" />
+        <result column="review_count" property="reviewCount" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        movie_asin, movie_title, movie_score, movie_genre, release_year, release_month, release_day, 
+        release_quarter, release_weekday, actor_id_list, director_id_list, edition_list, 
+        actor_count, director_count, edition_count, review_count
+    </sql>
+
+</mapper>

@@ -1,0 +1,23 @@
+# 本地开发环境配置 - Hive数据库
+spring:
+  datasource:
+    # 本地Hive数据库配置，请根据实际情况修改
+    url: jdbc:hive2://106.15.53.23:10000/default
+    username: hiveuser
+    password: 123456
+    # Hive的JDBC驱动类名是org.apache.hive.jdbc.HiveDriver
+    driver-class-name: org.apache.hive.jdbc.HiveDriver
+    # Hive连接配置
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.query.hive.entity
+  configuration:
+    map-underscore-to-camel-case: true

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.query.hive.mapper.ActorsCooperationMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.query.hive.entity.ActorsCooperation">
+        <id column="actor1_id" property="actor1Id" />
+        <result column="actor2_id" property="actor2Id" />
+        <result column="actor1_name" property="actor1Name" />
+        <result column="actor2_name" property="actor2Name" />
+        <result column="movie_num" property="movieNum" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        actor1_id, actor2_id, actor1_name, actor2_name, movie_num
+    </sql>
+
+</mapper>

@@ -1,0 +1,20 @@
+# 应用基本配置
+spring:
+  application:
+    name: hive
+  profiles:
+    active: local  # 默认使用local配置
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# 日志配置
+logging:
+  level:
+    com.query.hive: debug
+    org.apache.hive: info
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
