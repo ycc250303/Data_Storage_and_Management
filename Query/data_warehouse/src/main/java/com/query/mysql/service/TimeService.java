@@ -15,4 +15,6 @@ public interface TimeService extends IService<Movies> {
     public List<Map<String, Object>> getMovieCountByYearAndQuarter(int year, int quarter);
 
     public List<Map<String, Object>> getMovieCountByWeekday(int weekday);
+
+   // public List<Map<String, Object>> getMovieCountByYearStartAndEnd(int yearStart, int yearEnd);
 }

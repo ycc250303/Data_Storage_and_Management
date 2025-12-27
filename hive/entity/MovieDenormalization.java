@@ -1,7 +1,5 @@
-package com.query.mysql.entity;
+package com.query.hive.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 
@@ -20,12 +18,6 @@ import lombok.Data;
 public class MovieDenormalization implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 自增主键
-     */
-    @TableId(value = "id", type = IdType.AUTO)
-    private Integer id;
 
     /**
      * 电影ID
@@ -107,4 +99,3 @@ public class MovieDenormalization implements Serializable {
      */
     private Integer reviewCount;
 }
-

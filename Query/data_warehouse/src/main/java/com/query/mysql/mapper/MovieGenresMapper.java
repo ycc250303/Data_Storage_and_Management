@@ -24,4 +24,5 @@ public interface MovieGenresMapper extends BaseMapper<MovieGenres> {
      */
     List<Map<String, Object>> getMoviesByGenreName(@Param("movieGenre") String movieGenre);
 
+    List<Map<String, Object>> getMovieCountByGenre(@Param("movieGenre") String movieGenre);
 }

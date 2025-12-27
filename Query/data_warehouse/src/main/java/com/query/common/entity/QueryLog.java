@@ -34,17 +34,12 @@ public class QueryLog implements Serializable {
     private LocalDateTime queryTime;
 
     /**
-     * 用户执行的查询语句
-     */
-    private String querySql;
-
-    /**
      * 用户查询时传递的参数
      */
     private String queryParams;
 
     /**
-     * 查询耗时
+     * 查询耗时（毫秒）
      */
     private Float queryDuration;
 
@@ -63,4 +58,3 @@ public class QueryLog implements Serializable {
      */
     private String errorMessage;
 }
-

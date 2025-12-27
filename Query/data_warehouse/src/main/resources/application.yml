@@ -1,10 +1,11 @@
 spring:
+  profiles:
+    active: local
   application:
-    name :backend
-  config:
-    import: optional:classpath:/application-local.yml
+    name :data-warehouse-query-service
 
+# MyBatis Plus 通用配置
 mybatis-plus:
-  mapper-locations: classpath:/xml/*.xml
+  mapper-locations: classpath:/xml/**/*.xml
   configuration:
     map-underscore-to-camel-case: true

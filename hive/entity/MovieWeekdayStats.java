@@ -1,4 +1,4 @@
-package com.query.mysql.entity;
+package com.query.hive.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;

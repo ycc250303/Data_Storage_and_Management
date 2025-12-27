@@ -14,8 +14,8 @@ MOVIE_REVIEW_NUM_FILE = "../../data/etl/review_num.csv"
 MOVIE_REVIEW_INFO_FILE = "../../movies.txt"
 
 # 异步模式配置（优化后，平衡性能与稳定性）
-ASYNC_MAX_CONCURRENT = 15  # 最大并发数
-ASYNC_POOL_SIZE = 15  # 异步连接池大小
+ASYNC_MAX_CONCURRENT = 20  # 最大并发数
+ASYNC_POOL_SIZE = 20  # 异步连接池大小
 ASYNC_BATCH_SIZE = 50  # 每批处理的数据量
 MAX_RETRY = 5  # 最大重试次数（适用于死锁和锁超时）
 
@@ -699,7 +699,7 @@ if __name__ == "__main__":
             max_movies=0,          # 加载到第N部电影
             min_review_nums=0,  # 从第N条评论数量开始（断点续传）
             max_review_nums=0,     # 更新到第N条评论数量
-            min_reviews=1384349,      # 从第N条评论开始（断点续传）
+            min_reviews=673389,      # 从第N条评论开始（断点续传）
             max_reviews=None       # 加载到第N条评论
         ))
         

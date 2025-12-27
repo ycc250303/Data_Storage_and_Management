@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/movie")
+@RequestMapping("/api/mysql/movie")
 public class MovieController {
 
     @Autowired

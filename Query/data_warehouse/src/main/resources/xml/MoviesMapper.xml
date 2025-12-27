@@ -15,5 +15,4 @@
     <sql id="Base_Column_List">
         id, movie_asin, movie_title, score, review_num
     </sql>
-
 </mapper>

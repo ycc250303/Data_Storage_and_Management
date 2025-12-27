@@ -1,6 +1,5 @@
 package com.query.mysql.service.impl;
 
-import com.query.mysql.mapper.ActorStatsMapper;
 import com.query.mysql.mapper.ActorsMapper;
 import com.query.mysql.service.ActorService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,14 +22,11 @@ import java.util.stream.Collectors;
 public class ActorServiceImpl implements ActorService {
 
     @Autowired
-    ActorStatsMapper actorStatsMapper;
-
-    @Autowired
     ActorsMapper actorsMapper;
 
     @Override
     public List<Map<String, Object>> getActorMovieCount(String actorName) {
-        List<Map<String, Object>> results = actorStatsMapper.getActorMovieCountByFuzzyName(actorName);
+        List<Map<String, Object>> results = actorsMapper.getActorMovieCountByActorName(actorName);
         if (results == null || results.isEmpty()) {
             return List.of();
         }
@@ -60,4 +56,3 @@ public class ActorServiceImpl implements ActorService {
                 .collect(Collectors.toList());
     }
 }
-

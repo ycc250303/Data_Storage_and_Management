@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/time")
+@RequestMapping("/api/mysql/time")
 public class TimeController {
     @Autowired
     private TimeService timeService;
@@ -38,4 +38,10 @@ public class TimeController {
     public ResponseEntity<List<Map<String, Object>>> getMovieCountByWeekday(@RequestParam int weekday) {
         return ResponseEntity.ok(timeService.getMovieCountByWeekday(weekday));
     }
+
+//    @GetMapping("/year-start-end-count")
+//    public ResponseEntity<List<Map<String, Object>>> getMovieCountByYearStartAndEnd(@RequestParam int yearStart,
+//            @RequestParam int yearEnd) {
+//        return ResponseEntity.ok(timeService.getMovieCountByYearStartAndEnd(yearStart, yearEnd));
+//    }
 }

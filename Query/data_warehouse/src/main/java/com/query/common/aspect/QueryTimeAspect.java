@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.query.common.model.QueryResponse;
 import com.query.common.entity.QueryLog;
 import com.query.common.service.QueryLogService;
-import com.query.common.config.SqlExecutionTimeInterceptor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -16,11 +15,10 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * AOP切面：拦截Controller方法，包装返回结果并添加耗时信息，同时记录查询日志
+ * AOP切面：拦截Controller方法，包装返回结果并添加总耗时信息，同时记录查询日志
  */
 @Aspect
 @Component
@@ -46,14 +44,14 @@ public class QueryTimeAspect {
         String methodName = method.getName();
         String className = joinPoint.getTarget().getClass().getSimpleName();
 
-        // 获取查询类型（Controller类名 + 方法名），限制在128个字符内
+        // 获取查询类型（Controller类名 + 方法名），限制在32个字符内
         String queryType = className + "." + methodName;
-        if (queryType.length() > 128) {
-            // 如果太长，只使用方法名，如果方法名也超过128，则截断
-            if (methodName.length() <= 128) {
+        if (queryType.length() > 32) {
+            // 如果太长，只使用方法名，如果方法名也超过32，则截断
+            if (methodName.length() <= 32) {
                 queryType = methodName;
             } else {
-                queryType = methodName.substring(0, 128);
+                queryType = methodName.substring(0, 32);
             }
         }
 
@@ -74,11 +72,6 @@ public class QueryTimeAspect {
             long totalEndTime = System.currentTimeMillis();
             long totalTime = totalEndTime - totalStartTime;
 
-            // 获取SQL执行时间和SQL语句
-            Long sqlTime = SqlExecutionTimeInterceptor.getSqlExecutionTime();
-            List<String> sqlStatements = SqlExecutionTimeInterceptor.getSqlStatements();
-            String querySql = formatSqlStatements(sqlStatements);
-
             // 如果返回的是ResponseEntity，需要特殊处理
             if (result instanceof ResponseEntity) {
                 ResponseEntity<?> responseEntity = (ResponseEntity<?>) result;
@@ -87,40 +80,27 @@ public class QueryTimeAspect {
                 // 如果body已经是QueryResponse，直接返回
                 if (body instanceof QueryResponse) {
                     // 保存日志
-                    saveQueryLog(queryTime, querySql, queryParams, totalTime, queryType,
+                    saveQueryLog(queryTime, queryParams, totalTime, queryType,
                             queryResult, errorMessage);
-                    SqlExecutionTimeInterceptor.clear();
                     return result;
                 }
 
-                // 包装成QueryResponse
-                QueryResponse<Object> queryResponse = QueryResponse.success(
-                        body,
-                        sqlTime,
-                        totalTime);
+                // 包装成QueryResponse，只使用总耗时
+                QueryResponse<Object> queryResponse = QueryResponse.success(body, totalTime);
 
                 // 保存日志
-                saveQueryLog(queryTime, querySql, queryParams, totalTime, queryType,
+                saveQueryLog(queryTime, queryParams, totalTime, queryType,
                         queryResult, errorMessage);
-
-                // 清除ThreadLocal
-                SqlExecutionTimeInterceptor.clear();
 
                 return ResponseEntity.ok(queryResponse);
             }
 
             // 如果返回的不是ResponseEntity，直接包装
-            QueryResponse<Object> queryResponse = QueryResponse.success(
-                    result,
-                    sqlTime,
-                    totalTime);
+            QueryResponse<Object> queryResponse = QueryResponse.success(result, totalTime);
 
             // 保存日志
-            saveQueryLog(queryTime, querySql, queryParams, totalTime, queryType,
+            saveQueryLog(queryTime, queryParams, totalTime, queryType,
                     queryResult, errorMessage);
-
-            // 清除ThreadLocal
-            SqlExecutionTimeInterceptor.clear();
 
             return queryResponse;
 
@@ -134,16 +114,9 @@ public class QueryTimeAspect {
                 errorMessage = errorMessage.substring(0, 1024);
             }
 
-            // 获取SQL语句
-            List<String> sqlStatements = SqlExecutionTimeInterceptor.getSqlStatements();
-            String querySql = formatSqlStatements(sqlStatements);
-
             // 保存日志
-            saveQueryLog(queryTime, querySql, queryParams, totalTime, queryType,
+            saveQueryLog(queryTime, queryParams, totalTime, queryType,
                     queryResult, errorMessage);
-
-            // 清除ThreadLocal
-            SqlExecutionTimeInterceptor.clear();
 
             // 重新抛出异常
             throw e;
@@ -153,18 +126,17 @@ public class QueryTimeAspect {
     /**
      * 保存查询日志
      */
-    private void saveQueryLog(LocalDateTime queryTime, String querySql, String queryParams,
+    private void saveQueryLog(LocalDateTime queryTime, String queryParams,
             long totalTime, String queryType, String queryResult,
             String errorMessage) {
         QueryLog queryLog = new QueryLog();
         queryLog.setQueryTime(queryTime);
-        queryLog.setQuerySql(querySql);
         queryLog.setQueryParams(queryParams);
         queryLog.setQueryDuration((float) totalTime); // 转换为Float，单位毫秒
 
-        // 限制queryType长度为128个字符（数据库字段限制）
-        if (queryType != null && queryType.length() > 128) {
-            queryType = queryType.substring(0, 128);
+        // 限制queryType长度为32个字符（数据库字段限制）
+        if (queryType != null && queryType.length() > 32) {
+            queryType = queryType.substring(0, 32);
         }
         queryLog.setQueryType(queryType);
 
@@ -211,7 +183,6 @@ public class QueryTimeAspect {
             }
 
             // 转换为JSON字符串
-            // 注意：这里需要考虑循环引用等复杂情况，简单起见直接转换
             String json = objectMapper.writeValueAsString(paramMap);
 
             // 限制总长度
@@ -255,39 +226,4 @@ public class QueryTimeAspect {
         }
         return result;
     }
-
-    /**
-     * 格式化SQL语句列表为字符串
-     */
-    private String formatSqlStatements(List<String> sqlStatements) {
-        if (sqlStatements == null || sqlStatements.isEmpty()) {
-            return null;
-        }
-        if (sqlStatements.size() == 1) {
-            String sql = sqlStatements.get(0);
-            // 限制SQL长度
-            if (sql != null && sql.length() > 1024) {
-                sql = sql.substring(0, 1021) + "...";
-            }
-            return sql;
-        }
-        // 多个SQL用分号分隔
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < sqlStatements.size(); i++) {
-            if (i > 0) {
-                sb.append("; ");
-            }
-            String sql = sqlStatements.get(i);
-            if (sql != null) {
-                sb.append(sql);
-            }
-        }
-        String result = sb.toString();
-        // 限制总长度
-        if (result.length() > 1024) {
-            result = result.substring(0, 1021) + "...";
-        }
-        return result;
-    }
 }
-

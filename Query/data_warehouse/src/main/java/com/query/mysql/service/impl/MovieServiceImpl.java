@@ -1,10 +1,8 @@
 package com.query.mysql.service.impl;
 
+import com.query.mysql.mapper.*;
+import com.query.mysql.entity.MovieEditions;
 import com.query.mysql.entity.Movies;
-import com.query.mysql.mapper.MovieDenormalizationMapper;
-import com.query.mysql.mapper.MovieGenreStatsMapper;
-import com.query.mysql.mapper.MovieGenresMapper;
-import com.query.mysql.mapper.MoviesMapper;
 import com.query.mysql.service.MovieService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,17 +26,15 @@ import java.util.stream.Stream;
 @Service
 public class MovieServiceImpl extends ServiceImpl<MoviesMapper, Movies> implements MovieService {
     @Autowired
-    MovieDenormalizationMapper movieDenormalizationMapper;
-
-    @Autowired
-    MovieGenreStatsMapper movieGenreStatsMapper;
+    MovieEditionsMapper movieEditionsMapper;
 
     @Autowired
     MovieGenresMapper movieGenresMapper;
 
     @Override
     public List<Map<String, Object>> getMovieEditions(String movieTitle) {
-        List<Map<String, Object>> results = movieDenormalizationMapper.getMovieEditionsByMovieTitle(movieTitle);
+        // 由于我们只支持MySQL，不再需要传递databaseType参数
+        List<Map<String, Object>> results = movieEditionsMapper.getMovieEditionsByMovieTitle(movieTitle);
         if (results == null || results.isEmpty()) {
             return List.of();
         }
@@ -50,7 +46,7 @@ public class MovieServiceImpl extends ServiceImpl<MoviesMapper, Movies> implemen
 
     @Override
     public List<Map<String, Object>> getMovieEditionCount(String movieTitle) {
-        List<Map<String, Object>> results = movieDenormalizationMapper.getMovieEditionCountByMovieTitle(movieTitle);
+        List<Map<String, Object>> results = movieEditionsMapper.getMovieEditionCountByMovieTitle(movieTitle);
         if (results == null || results.isEmpty()) {
             return List.of();
         }
@@ -67,7 +63,7 @@ public class MovieServiceImpl extends ServiceImpl<MoviesMapper, Movies> implemen
 
     @Override
     public List<Map<String, Object>> getMovieCountByGenre(String movieGenre) {
-        return movieGenreStatsMapper.getMovieCountByGenre(movieGenre);
+        return movieGenresMapper.getMovieCountByGenre(movieGenre);
     }
 
     @Override

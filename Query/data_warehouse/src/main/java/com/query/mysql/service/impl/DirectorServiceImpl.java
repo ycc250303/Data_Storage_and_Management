@@ -1,6 +1,5 @@
 package com.query.mysql.service.impl;
 
-import com.query.mysql.mapper.DirectorStatsMapper;
 import com.query.mysql.mapper.DirectorsMapper;
 import com.query.mysql.service.DirectorService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,14 +22,12 @@ import java.util.stream.Collectors;
 public class DirectorServiceImpl implements DirectorService {
 
     @Autowired
-    DirectorStatsMapper directorStatsMapper;
-
-    @Autowired
     DirectorsMapper directorsMapper;
 
     @Override
     public List<Map<String, Object>> getDirectorMovieCount(String directorName) {
-        List<Map<String, Object>> results = directorStatsMapper.getDirectorMovieCountByFuzzyName(directorName);
+        // 使用DirectorsMapper中的getDirectorMovieCountByFuzzyName方法，而不是已删除的DirectorStatsMapper
+        List<Map<String, Object>> results = directorsMapper.getDirectorMovieCountByFuzzyName(directorName);
         if (results == null || results.isEmpty()) {
             return List.of();
         }
@@ -60,4 +57,3 @@ public class DirectorServiceImpl implements DirectorService {
                 .collect(Collectors.toList());
     }
 }
-

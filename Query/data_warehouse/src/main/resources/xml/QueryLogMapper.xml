@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.query.common.mapper.QueryLogMapper">
+<mapper namespace="com.query.mysql.mapper.QueryLogMapper">
 
     <!-- 通用查询映射结果 -->
     <resultMap id="BaseResultMap" type="com.query.common.entity.QueryLog">
         <id column="log_id" property="logId" />
         <result column="query_time" property="queryTime" />
-        <result column="query_sql" property="querySql" />
         <result column="query_params" property="queryParams" />
         <result column="query_duration" property="queryDuration" />
         <result column="query_type" property="queryType" />
@@ -16,7 +15,7 @@
 
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
-        log_id, query_time, query_sql, query_params, query_duration, query_type, query_result, error_message
+        log_id, query_time, query_params, query_duration, query_type, query_result, error_message
     </sql>
 
 </mapper>

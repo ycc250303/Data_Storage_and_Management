@@ -1,7 +1,6 @@
-package com.query.mysql.entity;
+package com.query.hive.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 
@@ -9,23 +8,29 @@ import lombok.Data;
 
 /**
  * <p>
- * 电影年度统计表
+ * 电影月度统计表
  * </p>
  *
  * @author Data Warehouse Team
  * @since 2025-12-13
  */
 @Data
-@TableName("movie_yearly_stats")
-public class MovieYearlyStats implements Serializable {
+@TableName("movie_monthly_stats")
+public class MovieMonthlyStats implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     /**
      * 上映年份
      */
-    @TableId(value = "release_year", type = IdType.INPUT)
+    @TableField("release_year")
     private Integer releaseYear;
+
+    /**
+     * 上映月份
+     */
+    @TableField("release_month")
+    private Integer releaseMonth;
 
     /**
      * 上映电影数

@@ -6,8 +6,6 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * <p>
@@ -19,7 +17,7 @@ import lombok.Setter;
  */
 @Data
 @TableName("movie_editions")
-public class MovieVersions implements Serializable {
+public class MovieEditions implements Serializable {
 
     private static final long serialVersionUID = 1L;
 

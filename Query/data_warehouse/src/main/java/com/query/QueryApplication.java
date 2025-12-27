@@ -7,7 +7,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableAsync
-@MapperScan("com.query.**.mapper")
+@MapperScan("com.query.mysql.mapper")
 public class QueryApplication {
 
     public static void main(String[] args) {

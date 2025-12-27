@@ -1,7 +1,5 @@
-package com.query.mysql.entity;
+package com.query.hive.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 
@@ -24,7 +22,6 @@ public class DirectorStats implements Serializable {
     /**
      * 导演 ID
      */
-    @TableId(value = "director_id", type = IdType.INPUT)
     private Long directorId;
 
     /**

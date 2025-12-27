@@ -24,4 +24,8 @@ public interface ActorsMapper extends BaseMapper<Actors> {
      */
     List<Map<String, Object>> getActorMoviesByExactName(@Param("actorName") String actorName);
 
+    /**
+     * 模糊匹配查询演员参演电影数量
+     */
+    List<Map<String, Object>> getActorMovieCountByActorName(@Param("actorName") String actorName);
 }

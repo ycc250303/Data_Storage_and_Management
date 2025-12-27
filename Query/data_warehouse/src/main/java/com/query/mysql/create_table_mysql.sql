@@ -185,3 +185,68 @@ CREATE TABLE movie_genre_stats
     total_movies  int         not null comment '电影数',
     average_score float       not null comment '平均评分'
 ) comment '电影风格统计表';
+
+LOAD DATA INFILE '/var/lib/mysql-files/hive/actors/actors.csv'
+    INTO TABLE actors
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;
+
+drop table if exists directors;
+LOAD DATA INFILE '/var/lib/mysql-files/hive/directors/directors.csv'
+    INTO TABLE directors
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;
+
+LOAD DATA INFILE '/var/lib/mysql-files/hive/movie_actors/movie_actors.csv'
+    INTO TABLE movie_actors
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;
+
+LOAD DATA INFILE '/var/lib/mysql-files/hive/movie_directors/movie_directors.csv'
+    INTO TABLE movie_directors
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;
+
+LOAD DATA INFILE '/var/lib/mysql-files/hive/movie_editions/movie_editions.csv'
+    INTO TABLE movie_editions
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;
+
+LOAD DATA INFILE '/var/lib/mysql-files/hive/movie_genres/movie_genres.csv'
+    INTO TABLE movie_genres
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;
+
+LOAD DATA INFILE '/var/lib/mysql-files/hive/movies/movies.csv'
+    INTO TABLE movies
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;
+
+LOAD DATA INFILE '/var/lib/mysql-files/hive/release_dates/release_dates.csv'
+    INTO TABLE release_dates
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;
+
+LOAD DATA INFILE '/var/lib/mysql-files/hive/reviews/reviews.csv'
+    INTO TABLE reviews
+    CHARACTER SET latin1
+    FIELDS TERMINATED BY ','
+    ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    IGNORE 1 ROWS;

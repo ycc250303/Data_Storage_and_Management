@@ -17,10 +17,25 @@
     <!-- 根据电影类别名称查询电影名称列表 -->
     <select id="getMoviesByGenreName" resultType="java.util.Map">
         SELECT DISTINCT m.movie_title 
-        FROM data_warehouse.movie_genres mg 
-        JOIN data_warehouse.movies m ON mg.movie_id = m.id 
+        FROM movie_genres mg 
+        JOIN movies m ON mg.movie_id = m.id 
         WHERE mg.genre = #{movieGenre} 
         ORDER BY m.movie_title
     </select>
 
+    <!-- 查询电影类型统计信息 -->
+    <select id="getMovieCountByGenre" resultType="java.util.Map">
+        SELECT 
+            mg.genre,
+            COUNT(DISTINCT m.id) AS total_movies,
+            AVG(m.score) AS average_score
+        FROM 
+            movies m
+        INNER JOIN 
+            movie_genres mg ON m.id = mg.movie_id
+        WHERE 
+            mg.genre = #{movieGenre}
+        GROUP BY 
+            mg.genre
+    </select>
 </mapper>

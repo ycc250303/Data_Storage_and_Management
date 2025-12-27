@@ -1,4 +1,4 @@
-package com.query.common.mapper;
+package com.query.mysql.mapper;
 
 import com.query.common.entity.QueryLog;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;

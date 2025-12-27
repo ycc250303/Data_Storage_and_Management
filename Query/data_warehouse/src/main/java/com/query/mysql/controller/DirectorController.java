@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/director")
+@RequestMapping("/api/mysql/director")
 public class DirectorController {
 
     @Autowired

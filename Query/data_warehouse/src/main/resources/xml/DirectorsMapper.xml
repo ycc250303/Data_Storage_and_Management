@@ -17,11 +17,30 @@
     <!-- 精确匹配查询导演导演的电影列表 -->
     <select id="getDirectorMoviesByExactName" resultType="java.util.Map">
         SELECT DISTINCT m.movie_title 
-        FROM data_warehouse.directors d 
-        JOIN data_warehouse.movie_directors md ON d.id = md.director_id 
-        JOIN data_warehouse.movies m ON md.movie_id = m.id 
+        FROM directors d 
+        JOIN movie_directors md ON d.id = md.director_id 
+        JOIN movies m ON md.movie_id = m.id 
         WHERE d.name = #{directorName} 
         ORDER BY m.movie_title
     </select>
+
+        <!-- 新的查询：使用基础表的多表连接实现 -->
+    <select id="getDirectorMovieCountByFuzzyName" resultType="java.util.Map">
+        SELECT 
+            d.name AS director_name,
+            COUNT(DISTINCT md.movie_id) AS movie_count,
+            AVG(m.score) AS avg_score
+        FROM 
+            directors d
+        INNER JOIN 
+            movie_directors md ON d.id = md.director_id
+        INNER JOIN 
+            movies m ON md.movie_id = m.id
+        WHERE 
+            d.name LIKE CONCAT('%', #{directorName}, '%')
+        GROUP BY 
+            d.id, d.name
+    </select>
+
 
 </mapper>

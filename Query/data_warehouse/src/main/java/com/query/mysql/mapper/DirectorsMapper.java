@@ -24,4 +24,9 @@ public interface DirectorsMapper extends BaseMapper<Directors> {
      */
     List<Map<String, Object>> getDirectorMoviesByExactName(@Param("directorName") String directorName);
 
+    /**
+     * 模糊匹配查询导演导演的电影统计
+     */
+    List<Map<String, Object>> getDirectorMovieCountByFuzzyName(@Param("directorName") String directorName);
+
 }
