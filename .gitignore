@@ -13,6 +13,5 @@ data/
 .pklnode_modules/ 
 dist/ 
 .env 
-fronted/node_modules/echarts/build/source-release/template/vote-result.tpl
 
-frontend/node_modules/
+/fronted/node_modules
