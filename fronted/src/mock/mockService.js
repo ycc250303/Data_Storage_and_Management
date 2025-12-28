@@ -74,12 +74,17 @@ export function mockComplexQuery(filters = {}) {
     if (filters.yearFrom && (m.year || 0) < filters.yearFrom) return false
     if (filters.yearTo && (m.year || 0) > filters.yearTo) return false
     if (filters.minRating && (m.rating || 0) < filters.minRating) return false
+    if (filters.maxRating && (m.rating || 0) > filters.maxRating) return false
+    if (filters.releaseDate && (m.releaseDate || '') !== filters.releaseDate) return false
     return true
   })
 
+  // Apply limit if specified
+  const limitedList = filters.limit ? list.slice(0, filters.limit) : list
+
   // mock timing: scale with number of items and arbitrary base per storage
   const base = { mysql: 50, hive: 200, neo4j: 30 }
-  const scale = Math.max(1, Math.round(list.length / 2))
+  const scale = Math.max(1, Math.round(limitedList.length / 2))
   const byStorage = {
     mysql: base.mysql * scale,
     hive: base.hive * scale,
@@ -92,7 +97,7 @@ export function mockComplexQuery(filters = {}) {
   ]
 
   return new Promise(resolve => {
-    setTimeout(() => resolve({ items: list, total: list.length, byStorage, samples }), 250)
+    setTimeout(() => resolve({ items: limitedList, total: list.length, byStorage, samples }), 250)
   })
 }
 

@@ -63,7 +63,6 @@
               <el-card>
                 <div><strong>耗时（ms）</strong></div>
                 <div class="muted" style="margin-top:8px">
-                  MySQL: {{ compare.byStorage?.mysql ?? '-' }}<br/>
                   Hive: {{ compare.byStorage?.hive ?? '-' }}<br/>
                   Neo4j: {{ compare.byStorage?.neo4j ?? '-' }}
                 </div>
@@ -99,6 +98,9 @@ async function run() {
   graph.value = res || { nodes: [], edges: [] }
   combos.value = res.combos || []
   const cmp = await compareTiming({ type: 'byRelation', ...params })
+  if (cmp && cmp.byStorage) {
+    delete cmp.byStorage.mysql
+  }
   compare.value = cmp || { byStorage: {}, samples: [] }
   activeTab.value = 'results'
 }
@@ -109,6 +111,9 @@ async function runType() {
   graph.value = res || { nodes: [], edges: [] }
   combos.value = res.combos || []
   const cmp = await compareTiming({ type: 'byRelation', ...params })
+  if (cmp && cmp.byStorage) {
+    delete cmp.byStorage.mysql
+  }
   compare.value = cmp || { byStorage: {}, samples: [] }
   activeTab.value = 'results'
 }

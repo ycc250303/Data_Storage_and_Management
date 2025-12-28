@@ -6,17 +6,29 @@
         <el-row :gutter="16">
           <el-col :span="8">
             <el-form-item label="影片标题">
-              <el-input v-model="filters.title" placeholder="影片标题或关键字" clearable/>
+              <el-input
+                v-model="filters.title"
+                placeholder="影片标题或关键字"
+                clearable
+              />
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="导演">
-              <el-input v-model="filters.director" placeholder="导演姓名" clearable/>
+              <el-input
+                v-model="filters.director"
+                placeholder="导演姓名"
+                clearable
+              />
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="演员">
-              <el-input v-model="filters.actor" placeholder="演员姓名" clearable/>
+              <el-input
+                v-model="filters.actor"
+                placeholder="演员姓名"
+                clearable
+              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -24,29 +36,74 @@
         <el-row :gutter="16">
           <el-col :span="8">
             <el-form-item label="电影类别">
-              <el-input v-model="filters.genre" placeholder="类别（逗号分隔）" clearable/>
+              <el-input v-model="filters.genre" placeholder="类别" clearable />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="发行日期">
+              <el-date-picker
+                v-model="filters.releaseDate"
+                type="date"
+                placeholder="选择日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                clearable
+              />
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row :gutter="16">
-          <el-col :span="6">
+          <el-col :span="4">
             <el-form-item label="年份从">
-              <el-input-number v-model="filters.yearFrom" :min="1900" :max="2100"/>
+              <el-input-number
+                v-model="filters.yearFrom"
+                :min="1900"
+                :max="2100"
+              />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="4">
             <el-form-item label="年份到">
-              <el-input-number v-model="filters.yearTo" :min="1900" :max="2100"/>
+              <el-input-number
+                v-model="filters.yearTo"
+                :min="1900"
+                :max="2100"
+              />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="4">
             <el-form-item label="最低评分">
-              <el-input-number v-model="filters.minRating" :min="0" :max="10"/>
+              <el-input-number
+                v-model="filters.minRating"
+                :min="0"
+                :max="5"
+                :precision="1"
+              />
             </el-form-item>
           </el-col>
-          <el-col :span="6" class="align-end">
-            <el-form-item>
+          <el-col :span="4">
+            <el-form-item label="最高评分">
+              <el-input-number
+                v-model="filters.maxRating"
+                :min="0"
+                :max="5"
+                :precision="1"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="4">
+            <el-form-item label="查询总量">
+              <el-input-number
+                v-model="filters.limit"
+                :min="1"
+                placeholder="不限制请留空"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="2" class="align-end">
+            <el-form-item class="button-group">
               <el-button type="primary" @click="run">查询</el-button>
               <el-button @click="reset">清空</el-button>
             </el-form-item>
@@ -54,35 +111,61 @@
         </el-row>
       </el-form>
 
-      <div style="margin-top:18px;">
+      <div style="margin-top: 18px">
         <el-tabs v-model="activeTab" type="card">
           <el-tab-pane label="查询结果" name="results">
-            <el-table :data="items" stripe style="width:100%">
-              <el-table-column prop="title" label="标题" />
-              <el-table-column prop="year" label="年份" width="120" />
-              <el-table-column prop="genres" label="类别" />
-              <el-table-column prop="rating" label="评分" width="100" />
+            <el-table :data="displayedItems" stripe style="width: 100%">
+              <el-table-column prop="movieAsin" label="电影ID" width="150" />
+              <el-table-column prop="movieTitle" label="电影标题" width="200" />
+              <el-table-column prop="movieScore" label="评分" width="100" />
+              <el-table-column prop="actors" label="演员" width="200" />
+              <el-table-column prop="directors" label="导演" width="150" />
+              <el-table-column prop="movieGenre" label="电影类型" width="150" />
+              <el-table-column prop="date" label="日期" width="120" />
+              <el-table-column prop="edition" label="版本" width="120" />
             </el-table>
+            <div
+              style="margin-top: 16px; display: flex; justify-content: flex-end"
+            >
+              <el-pagination
+                :current-page="currentPage"
+                @update:current-page="(val) => (currentPage = val)"
+                :page-size="pageSize"
+                @update:page-size="(val) => (pageSize = val)"
+                :page-sizes="[20, 50, 100]"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="items.length"
+              />
+            </div>
           </el-tab-pane>
           <el-tab-pane label="性能对比" name="compare">
-            <div style="display:flex; gap:16px;">
-              <div style="flex:1">
-                <div ref="chartRef" style="width:100%;min-height:360px;"></div>
+            <div style="display: flex; gap: 16px">
+              <div style="flex: 1">
+                <div
+                  ref="chartRef"
+                  style="width: 100%; min-height: 360px"
+                ></div>
               </div>
-              <div style="width:320px">
+              <div style="width: 320px">
                 <el-card>
-                  <div><strong>总体耗时（ms）</strong></div>
-                  <div class="muted" style="margin-top:8px">
-                    MySQL: {{ compare.byStorage?.mysql ?? '-' }}<br/>
-                    Hive: {{ compare.byStorage?.hive ?? '-' }}<br/>
-                    Neo4j: {{ compare.byStorage?.neo4j ?? '-' }}
+                  <div><strong>总体耗时</strong></div>
+                  <div class="muted" style="margin-top: 8px">
+                    MySQL: {{ formatTime(compare.byStorage?.mysql) }}<br />
+                    Hive: {{ formatTime(compare.byStorage?.hive) }}
                   </div>
-                  <div style="margin-top:12px;">
+                  <div style="margin-top: 12px">
                     <el-table :data="compare.samples" stripe>
                       <el-table-column prop="query" label="查询样例" />
-                      <el-table-column prop="mysql" label="MySQL" width="100" />
-                      <el-table-column prop="hive" label="Hive" width="100" />
-                      <el-table-column prop="neo4j" label="Neo4j" width="100" />
+                      <el-table-column label="MySQL" width="100">
+                        <template #default="scope">
+                          {{ formatTime(scope.row.mysql) }}
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="Hive" width="100">
+                        <template #default="scope">
+                          {{ formatTime(scope.row.hive) }}
+                        </template>
+                      </el-table-column>
                     </el-table>
                   </div>
                 </el-card>
@@ -96,64 +179,193 @@
 </template>
 
 <script setup>
-import { ref, nextTick, watch } from 'vue'
-import { complexQuery } from '@/api/queries'
+import { ref, nextTick, watch, computed } from "vue";
+import { complexQuery } from "@/api/queries";
 
 const filters = ref({
-  title: '', director: '', actor: '', yearFrom: null, yearTo: null, minRating: null
-})
-const items = ref([])
-const activeTab = ref('results')
+  title: "",
+  director: "",
+  actor: "",
+  genre: "",
+  yearFrom: null,
+  yearTo: null,
+  minRating: null,
+  maxRating: null,
+  limit: null,
+  releaseDate: null,
+});
+const items = ref([]);
+const activeTab = ref("results");
 
-const compare = ref({ byStorage: {}, samples: [] })
-const chartRef = ref(null)
-let chartInstance = null
+const currentPage = ref(1);
+const pageSize = ref(20);
+
+const displayedItems = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return items.value.slice(start, end);
+});
+
+const compare = ref({ byStorage: {}, samples: [] });
+
+// 格式化耗时显示
+const formatTime = (ms) => {
+  if (ms === undefined || ms === null || ms === "-") return "-";
+  if (ms >= 1000) {
+    return (ms / 1000).toFixed(2) + " s";
+  }
+  return ms + " ms";
+};
+
+const chartRef = ref(null);
+let chartInstance = null;
 
 async function run() {
-  const res = await complexQuery(filters.value)
-  items.value = res.items || []
-  compare.value = { byStorage: res.byStorage || {}, samples: res.samples || [] }
-  activeTab.value = 'results'
+  console.log("[View] Running complex query with filters:", filters.value);
+  const res = await complexQuery(filters.value);
+  // 适配后端 MovieDetailDto 或 mock 数据
+  const mappedItems = (res.items || []).map((item) => ({
+    movieAsin: item.movieAsin || item.id || "",
+    movieTitle: item.movieTitle || item.title || "",
+    movieScore: item.movieScore || item.rating || 0,
+    actors: item.actors
+      ? Array.isArray(item.actors)
+        ? item.actors.join(", ")
+        : item.actors
+      : "",
+    directors: item.directors || item.director || "",
+    movieGenre: item.movieGenre
+      ? Array.isArray(item.movieGenre)
+        ? item.movieGenre.join(", ")
+        : item.movieGenre
+      : Array.isArray(item.genres)
+      ? item.genres.join(", ")
+      : item.genres || "",
+    date: item.date || item.releaseDate || "",
+    edition: item.edition || "标准版",
+  }));
+
+  console.log("[View] Mapped query results:", mappedItems);
+  items.value = mappedItems;
+  currentPage.value = 1; // 查询后重置到第一页
+
+  compare.value = {
+    byStorage: res.byStorage || {},
+    samples: res.samples || [],
+  };
+  activeTab.value = "results";
 }
 
 function reset() {
-  filters.value = { title: '', director: '', actor: '', yearFrom: null, yearTo: null, minRating: null }
-  items.value = []
-  compare.value = { byStorage: {}, samples: [] }
+  filters.value = {
+    title: "",
+    director: "",
+    actor: "",
+    genre: "",
+    yearFrom: null,
+    yearTo: null,
+    minRating: null,
+    maxRating: null,
+    limit: null,
+    releaseDate: null,
+  };
+  items.value = [];
+  currentPage.value = 1;
+  compare.value = { byStorage: {}, samples: [] };
 }
 
-watch(compare, async () => {
-  await nextTick()
-  const el = chartRef.value
-  if (!el) return
-  if (!chartInstance) {
-    try {
-      const mod = await import(/* @vite-ignore */ 'echarts')
-      const echarts = mod && (mod.default || mod)
-      if (!echarts || !echarts.init) return
-      chartInstance = echarts.init(el)
-    } catch (e) {
-      console.warn('echarts import failed', e)
-      return
+watch(
+  compare,
+  async () => {
+    await nextTick();
+    const el = chartRef.value;
+    if (!el) return;
+    if (!chartInstance) {
+      try {
+        const mod = await import(/* @vite-ignore */ "echarts");
+        const echarts = mod && (mod.default || mod);
+        if (!echarts || !echarts.init) return;
+        chartInstance = echarts.init(el);
+      } catch (e) {
+        console.warn("echarts import failed", e);
+        return;
+      }
+    }
+    const categories = Object.keys(compare.value.byStorage || {});
+    const rawValues = categories.map((k) => compare.value.byStorage[k] || 0);
+    const maxValue = Math.max(...rawValues, 0);
+    const useSeconds = maxValue >= 1000;
+
+    const displayValues = useSeconds
+      ? rawValues.map((v) => v / 1000)
+      : rawValues;
+    const unit = useSeconds ? "s" : "ms";
+
+    const option = {
+      tooltip: {
+        trigger: "axis",
+        formatter: (params) => {
+          const p = params[0];
+          const val = useSeconds ? Number(p.value).toFixed(3) : p.value;
+          return `${p.name}<br/>耗时: ${val}${unit}`;
+        },
+      },
+      xAxis: {
+        type: "category",
+        data: categories.map((c) => c.toUpperCase()),
+      },
+      yAxis: {
+        type: "value",
+        name: `耗时 (${unit})`,
+        axisLabel: {
+          formatter: `{value} ${unit}`,
+        },
+      },
+      series: [
+        {
+          type: "bar",
+          data: displayValues,
+          barWidth: "40px",
+          itemStyle: { color: "#2d8cf0" },
+        },
+      ],
+    };
+    chartInstance.setOption(option);
+  },
+  { deep: true }
+);
+
+// 监听标签页切换，切换到性能对比时重新渲染图表
+watch(activeTab, async (newTab) => {
+  if (newTab === "compare") {
+    await nextTick();
+    if (chartInstance) {
+      chartInstance.resize();
+    } else {
+      // 如果还没初始化，手动触发一次 compare 监听逻辑
+      compare.value = { ...compare.value };
     }
   }
-  const categories = Object.keys(compare.value.byStorage || {})
-  const values = categories.map(k => compare.value.byStorage[k] || 0)
-  const option = {
-    tooltip: {},
-    xAxis: { type: 'category', data: categories },
-    yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: values, itemStyle: { color: '#2d8cf0' } }]
-  }
-  chartInstance.setOption(option)
-}, { deep: true })
-
+});
 </script>
 
 <style scoped>
-.complex-form .el-col .el-form-item { margin-bottom:10px; }
-.align-end { display:flex; align-items:flex-end; }
-.muted { color:#7b8794; }
+.complex-form .el-col .el-form-item {
+  margin-bottom: 10px;
+}
+.align-end {
+  display: flex;
+  align-items: flex-end;
+}
+.button-group .el-button {
+  margin-right: 8px;
+}
+.button-group .el-button:last-child {
+  margin-right: 0;
+}
+.muted {
+  color: #7b8794;
+}
 </style>
 
 
