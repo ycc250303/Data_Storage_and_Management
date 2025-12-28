@@ -52,6 +52,78 @@ app.get('/api/neo4j/actor/:name', async (req, res) => {
   }
 });
 
+// Director-Actor collaboration stats (by number of movies)
+app.get('/api/neo4j/stats/director-actor', async (req, res) => {
+  const limit = parseInt(req.query.limit || '50', 10);
+  const query = `
+    MATCH (d:Director)-[:DIRECTED]->(m:Movie)<-[:ACTED]-(a:Actor)
+    RETURN d.director_name AS director, a.actor_name AS actor, COUNT(m) AS collaborations
+    ORDER BY collaborations DESC
+    LIMIT $limit
+  `;
+  try {
+    const result = await runCypher(query, { limit: neo4j.int(limit) });
+    const rows = result.records.map(r => ({
+      director: r.get('director'),
+      actor: r.get('actor'),
+      collaborations: r.get('collaborations').toNumber ? r.get('collaborations').toNumber() : r.get('collaborations')
+    }));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Actor-pair collaboration ranked by total review_count (sum of reviews across co-starring movies)
+app.get('/api/neo4j/stats/collaborations_reviews', async (req, res) => {
+  const limit = parseInt(req.query.limit || '50', 10);
+  const query = `
+    MATCH (a:Actor)-[:ACTED]->(m:Movie)<-[:ACTED]-(b:Actor)
+    WHERE a.actor_name < b.actor_name
+    RETURN a.actor_name AS actor1, b.actor_name AS actor2, SUM(coalesce(m.review_count,0)) AS review_sum
+    ORDER BY review_sum DESC
+    LIMIT $limit
+  `;
+  try {
+    const result = await runCypher(query, { limit: neo4j.int(limit) });
+    const rows = result.records.map(r => ({
+      actor1: r.get('actor1'),
+      actor2: r.get('actor2'),
+      review_sum: r.get('review_sum').toNumber ? r.get('review_sum').toNumber() : r.get('review_sum')
+    }));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Actor-pair collaboration within a specific genre, ranked by review_count sum
+app.get('/api/neo4j/stats/collaborations_by_genre', async (req, res) => {
+  const genre = req.query.genre;
+  const limit = parseInt(req.query.limit || '50', 10);
+  if (!genre) return res.status(400).json({ error: 'genre query parameter required' });
+  const query = `
+    MATCH (g:Genre {genre_name:$genre})<-[:HAS_GENRE]-(m:Movie)
+    MATCH (a:Actor)-[:ACTED]->(m)<-[:ACTED]-(b:Actor)
+    WHERE a.actor_name < b.actor_name
+    RETURN a.actor_name AS actor1, b.actor_name AS actor2, SUM(coalesce(m.review_count,0)) AS review_sum, COUNT(DISTINCT m) AS movies
+    ORDER BY review_sum DESC
+    LIMIT $limit
+  `;
+  try {
+    const result = await runCypher(query, { genre, limit: neo4j.int(limit) });
+    const rows = result.records.map(r => ({
+      actor1: r.get('actor1'),
+      actor2: r.get('actor2'),
+      review_sum: r.get('review_sum').toNumber ? r.get('review_sum').toNumber() : r.get('review_sum'),
+      movies: r.get('movies').toNumber ? r.get('movies').toNumber() : r.get('movies')
+    }));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/neo4j/movie/:id', async (req, res) => {
   const movieId = req.params.id;
   const query = `
