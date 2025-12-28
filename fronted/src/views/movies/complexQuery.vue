@@ -104,7 +104,9 @@
           </el-col>
           <el-col :span="2" class="align-end">
             <el-form-item class="button-group">
-              <el-button type="primary" @click="run">查询</el-button>
+              <el-button type="primary" :loading="loading" @click="run"
+                >查询</el-button
+              >
               <el-button @click="reset">清空</el-button>
             </el-form-item>
           </el-col>
@@ -114,15 +116,32 @@
       <div style="margin-top: 18px">
         <el-tabs v-model="activeTab" type="card">
           <el-tab-pane label="查询结果" name="results">
-            <el-table :data="displayedItems" stripe style="width: 100%">
-              <el-table-column prop="movieAsin" label="电影ID" width="150" />
-              <el-table-column prop="movieTitle" label="电影标题" width="200" />
-              <el-table-column prop="movieScore" label="评分" width="100" />
-              <el-table-column prop="actors" label="演员" width="200" />
-              <el-table-column prop="directors" label="导演" width="150" />
-              <el-table-column prop="movieGenre" label="电影类型" width="150" />
-              <el-table-column prop="date" label="日期" width="120" />
-              <el-table-column prop="edition" label="版本" width="120" />
+            <el-table
+              v-loading="loading"
+              :data="displayedItems"
+              stripe
+              style="width: 100%"
+            >
+              <el-table-column
+                prop="movieAsin"
+                label="电影ASIN"
+                min-width="12%"
+              />
+              <el-table-column
+                prop="movieTitle"
+                label="电影标题"
+                min-width="20%"
+              />
+              <el-table-column prop="movieScore" label="评分" min-width="8%" />
+              <el-table-column prop="actors" label="演员" min-width="18%" />
+              <el-table-column prop="directors" label="导演" min-width="12%" />
+              <el-table-column
+                prop="movieGenre"
+                label="电影类型"
+                min-width="10%"
+              />
+              <el-table-column prop="date" label="日期" min-width="10%" />
+              <el-table-column prop="edition" label="版本" min-width="10%" />
             </el-table>
             <div
               style="margin-top: 16px; display: flex; justify-content: flex-end"
@@ -139,7 +158,7 @@
             </div>
           </el-tab-pane>
           <el-tab-pane label="性能对比" name="compare">
-            <div style="display: flex; gap: 16px">
+            <div v-loading="loading" style="display: flex; gap: 16px">
               <div style="flex: 1">
                 <div
                   ref="chartRef"
@@ -195,6 +214,7 @@ const filters = ref({
   releaseDate: null,
 });
 const items = ref([]);
+const loading = ref(false);
 const activeTab = ref("results");
 
 const currentPage = ref(1);
@@ -222,38 +242,45 @@ let chartInstance = null;
 
 async function run() {
   console.log("[View] Running complex query with filters:", filters.value);
-  const res = await complexQuery(filters.value);
-  // 适配后端 MovieDetailDto 或 mock 数据
-  const mappedItems = (res.items || []).map((item) => ({
-    movieAsin: item.movieAsin || item.id || "",
-    movieTitle: item.movieTitle || item.title || "",
-    movieScore: item.movieScore || item.rating || 0,
-    actors: item.actors
-      ? Array.isArray(item.actors)
-        ? item.actors.join(", ")
-        : item.actors
-      : "",
-    directors: item.directors || item.director || "",
-    movieGenre: item.movieGenre
-      ? Array.isArray(item.movieGenre)
-        ? item.movieGenre.join(", ")
-        : item.movieGenre
-      : Array.isArray(item.genres)
-      ? item.genres.join(", ")
-      : item.genres || "",
-    date: item.date || item.releaseDate || "",
-    edition: item.edition || "标准版",
-  }));
+  loading.value = true;
+  try {
+    const res = await complexQuery(filters.value);
+    // 适配后端 MovieDetailDto 或 mock 数据
+    const mappedItems = (res.items || []).map((item) => ({
+      movieAsin: item.movieAsin || item.id || "",
+      movieTitle: item.movieTitle || item.title || "",
+      movieScore: item.movieScore || item.rating || 0,
+      actors: item.actors
+        ? Array.isArray(item.actors)
+          ? item.actors.join(", ")
+          : item.actors
+        : "",
+      directors: item.directors || item.director || "",
+      movieGenre: item.movieGenre
+        ? Array.isArray(item.movieGenre)
+          ? item.movieGenre.join(", ")
+          : item.movieGenre
+        : Array.isArray(item.genres)
+        ? item.genres.join(", ")
+        : item.genres || "",
+      date: item.date || item.releaseDate || "",
+      edition: item.edition || "标准版",
+    }));
 
-  console.log("[View] Mapped query results:", mappedItems);
-  items.value = mappedItems;
-  currentPage.value = 1; // 查询后重置到第一页
+    console.log("[View] Mapped query results:", mappedItems);
+    items.value = mappedItems;
+    currentPage.value = 1; // 查询后重置到第一页
 
-  compare.value = {
-    byStorage: res.byStorage || {},
-    samples: res.samples || [],
-  };
-  activeTab.value = "results";
+    compare.value = {
+      byStorage: res.byStorage || {},
+      samples: res.samples || [],
+    };
+    activeTab.value = "results";
+  } catch (error) {
+    console.error("[View] Query failed:", error);
+  } finally {
+    loading.value = false;
+  }
 }
 
 function reset() {
