@@ -437,6 +437,56 @@ app.post('/api/neo4j/queries/complex', express.json(), async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+ 
+// Director-Actor collaboration ranked by total review_count (sum of reviews across co-operated movies)
+app.get('/api/neo4j/stats/director-actor_reviews', async (req, res) => {
+  const limit = parseInt(req.query.limit || '50', 10);
+  const query = `
+    MATCH (d:Director)-[:DIRECTED]->(m:Movie)<-[:ACTED]-(a:Actor)
+    RETURN d.director_name AS director, a.actor_name AS actor, SUM(coalesce(m.review_count,0)) AS review_sum, COUNT(DISTINCT m) AS movies
+    ORDER BY review_sum DESC
+    LIMIT $limit
+  `;
+  try {
+    const result = await runCypher(query, { limit: neo4j.int(limit) });
+    const rows = result.records.map(r => ({
+      director: r.get('director'),
+      actor: r.get('actor'),
+      review_sum: r.get('review_sum').toNumber ? r.get('review_sum').toNumber() : r.get('review_sum'),
+      movies: r.get('movies').toNumber ? r.get('movies').toNumber() : r.get('movies')
+    }));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Director-Actor collaboration within a specific genre, ranked by review_count sum
+app.get('/api/neo4j/stats/director-actor_by_genre', async (req, res) => {
+  const genre = req.query.genre;
+  const limit = parseInt(req.query.limit || '50', 10);
+  if (!genre) return res.status(400).json({ error: 'genre query parameter required' });
+  const query = `
+    MATCH (g:Genre {genre_name:$genre})<-[:HAS_GENRE]-(m:Movie)
+    MATCH (d:Director)-[:DIRECTED]->(m)<-[:ACTED]-(a:Actor)
+    RETURN d.director_name AS director, a.actor_name AS actor, SUM(coalesce(m.review_count,0)) AS review_sum, COUNT(DISTINCT m) AS movies
+    ORDER BY review_sum DESC
+    LIMIT $limit
+  `;
+  try {
+    const result = await runCypher(query, { genre, limit: neo4j.int(limit) });
+    const rows = result.records.map(r => ({
+      director: r.get('director'),
+      actor: r.get('actor'),
+      review_sum: r.get('review_sum').toNumber ? r.get('review_sum').toNumber() : r.get('review_sum'),
+      movies: r.get('movies').toNumber ? r.get('movies').toNumber() : r.get('movies')
+    }));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`neo4j-backend listening on port ${port}`);
