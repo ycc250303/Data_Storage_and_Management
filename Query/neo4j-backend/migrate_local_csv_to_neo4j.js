@@ -19,7 +19,7 @@ require('dotenv').config();
 const CSV_DIR = path.join(__dirname, '..', 'mysql-files');
 const MOVIES_CSV = path.join(CSV_DIR, 'final_movie_info.csv');
 
-const NEO4J_URI = process.env.NEO4J_URI || 'bolt://localhost:7687';
+const NEO4J_URI = process.env.NEO4J_URI || 'bolt://106.15.53.23:7687';
 const NEO4J_USER = process.env.NEO4J_USER || 'neo4j';
 const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD || 'change_me';
 

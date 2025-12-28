@@ -12,12 +12,6 @@ const routes = [
     meta: { title: '电影查询' }
   },
   {
-    path: '/movies/stats',
-    name: 'MovieStats',
-    component: () => import('@/views/movies/stats.vue'),
-    meta: { title: '电影统计' }
-  },
-  {
     path: '/movies/time',
     name: 'MovieTime',
     component: () => import('@/views/movies/timeQuery.vue'),

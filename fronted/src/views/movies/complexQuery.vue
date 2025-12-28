@@ -43,20 +43,52 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
+            <el-form-item label="选择数据库">
+              <el-checkbox-group v-model="filters.databases">
+                <el-checkbox label="mysql">MySQL</el-checkbox>
+                <el-checkbox label="hive">Hive</el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
             <el-form-item label="电影类别">
               <el-input v-model="filters.genre" placeholder="类别" clearable />
             </el-form-item>
           </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
           <el-col :span="8">
             <el-form-item label="发行日期">
-              <el-date-picker
-                v-model="filters.releaseDate"
-                type="date"
-                placeholder="选择日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                clearable
-              />
+              <div style="display: flex; gap: 8px; width: 100%">
+                <el-select
+                  v-model="filters.dateGranularity"
+                  style="width: 100px"
+                  @change="filters.releaseDate = null"
+                >
+                  <el-option label="按日" value="date" />
+                  <el-option label="按月" value="month" />
+                </el-select>
+                <el-date-picker
+                  v-model="filters.releaseDate"
+                  :type="filters.dateGranularity"
+                  :placeholder="
+                    filters.dateGranularity === 'date' ? '选择日期' : '选择月份'
+                  "
+                  :format="
+                    filters.dateGranularity === 'date'
+                      ? 'YYYY-MM-DD'
+                      : 'YYYY-MM'
+                  "
+                  :value-format="
+                    filters.dateGranularity === 'date'
+                      ? 'YYYY-MM-DD'
+                      : 'YYYY-MM'
+                  "
+                  clearable
+                  style="flex: 1"
+                />
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
@@ -104,17 +136,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="4">
-            <el-form-item label="查询总量">
-              <el-input-number
-                v-model="filters.limit"
-                :min="1"
-                placeholder="不限制"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="4" class="align-end">
+          <el-col :span="8" class="align-end">
             <el-form-item label-width="0px" class="button-group">
               <el-button type="primary" :loading="loading" @click="run"
                 >查询</el-button
@@ -199,18 +221,30 @@
                 <el-card>
                   <div><strong>总体耗时</strong></div>
                   <div class="muted" style="margin-top: 8px">
-                    MySQL: {{ formatTime(compare.byStorage?.mysql) }}<br />
-                    Hive: {{ formatTime(compare.byStorage?.hive) }}
+                    <span v-if="filters.databases.includes('mysql')">
+                      MySQL: {{ formatTime(compare.byStorage?.mysql) }}<br />
+                    </span>
+                    <span v-if="filters.databases.includes('hive')">
+                      Hive: {{ formatTime(compare.byStorage?.hive) }}
+                    </span>
                   </div>
                   <div style="margin-top: 12px">
                     <el-table :data="compare.samples" stripe>
                       <el-table-column prop="query" label="查询样例" />
-                      <el-table-column label="MySQL" width="100">
+                      <el-table-column
+                        v-if="filters.databases.includes('mysql')"
+                        label="MySQL"
+                        width="100"
+                      >
                         <template #default="scope">
                           {{ formatTime(scope.row.mysql) }}
                         </template>
                       </el-table-column>
-                      <el-table-column label="Hive" width="100">
+                      <el-table-column
+                        v-if="filters.databases.includes('hive')"
+                        label="Hive"
+                        width="100"
+                      >
                         <template #default="scope">
                           {{ formatTime(scope.row.hive) }}
                         </template>
@@ -233,6 +267,7 @@ import { complexQuery } from "@/api/queries";
 
 const filters = ref({
   mode: "multi",
+  databases: ["mysql", "hive"], // 默认全选
   title: "",
   director: "",
   actor: "",
@@ -241,8 +276,8 @@ const filters = ref({
   yearTo: null,
   minRating: null,
   maxRating: null,
-  limit: null,
   releaseDate: null,
+  dateGranularity: "date",
 });
 const items = ref([]);
 const loading = ref(false);
@@ -272,6 +307,12 @@ const chartRef = ref(null);
 let chartInstance = null;
 
 async function run() {
+  if (!filters.value.databases || filters.value.databases.length === 0) {
+    import("element-plus").then((mod) => {
+      mod.ElMessage.warning("请至少选择一个数据库");
+    });
+    return;
+  }
   console.log("[View] Running complex query with filters:", filters.value);
   loading.value = true;
   try {
@@ -317,6 +358,7 @@ async function run() {
 function reset() {
   filters.value = {
     mode: "multi",
+    databases: ["mysql", "hive"],
     title: "",
     director: "",
     actor: "",
@@ -325,8 +367,8 @@ function reset() {
     yearTo: null,
     minRating: null,
     maxRating: null,
-    limit: null,
     releaseDate: null,
+    dateGranularity: "date",
   };
   items.value = [];
   currentPage.value = 1;

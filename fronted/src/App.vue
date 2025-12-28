@@ -36,18 +36,6 @@
               <span class="nav-text">关系查询</span>
             </router-link>
           </li>
-          <li>
-            <router-link to="/movies/stats" class="nav-item" aria-label="电影统计">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="10" width="3" height="8" rx="0.5" />
-                  <rect x="9" y="6" width="3" height="12" rx="0.5" />
-                  <rect x="15" y="3" width="3" height="15" rx="0.5" />
-                </svg>
-              </span>
-              <span class="nav-text">电影统计</span>
-            </router-link>
-          </li>
         </ul>
         <div class="side-footer">© 学期项目</div>
       </aside>

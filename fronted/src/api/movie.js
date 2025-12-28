@@ -1,5 +1,5 @@
 import http from '@/utils/http'
-import { mockListMovies, mockGetMovie, mockStats } from '@/mock/mockService'
+import { mockListMovies, mockGetMovie } from '@/mock/mockService'
 
 /**
  * 获取电影列表（支持分页和过滤）
@@ -39,15 +39,6 @@ export async function searchMovies(query) {
     // basic client-side search via mock
     const r = await mockListMovies(query)
     return r.items || []
-  }
-}
-
-export async function movieStats() {
-  try {
-    const res = await http.get('/movies/stats')
-    return res || res.data || {}
-  } catch (err) {
-    return await mockStats()
   }
 }
 

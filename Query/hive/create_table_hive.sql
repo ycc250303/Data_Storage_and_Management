@@ -1,159 +1,246 @@
--- 创建数据库
-show tables;
--- actors 表
-drop table if exists actors;
-CREATE EXTERNAL TABLE IF NOT EXISTS actors
-(
-    id   BIGINT,
-    name STRING
+--------------------------------------------------
+-- ODS 外部表（CSV / TEXTFILE，统一 _ext 后缀）
+--------------------------------------------------
+
+DROP TABLE IF EXISTS actors_ext;
+CREATE EXTERNAL TABLE actors_ext (
+                                     id BIGINT,
+                                     name STRING
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/actors/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
-select count(*) from actors;
+    TBLPROPERTIES ("skip.header.line.count"="1");
 
 
-
---------------------------------------------------
--- directors
---------------------------------------------------
-drop table if exists directors;
-CREATE EXTERNAL TABLE IF NOT EXISTS directors
-(
-    id   BIGINT,
-    name STRING
+DROP TABLE IF EXISTS directors_ext;
+CREATE EXTERNAL TABLE directors_ext (
+                                        id BIGINT,
+                                        name STRING
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/directors/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
-select count(*) from directors;
---------------------------------------------------
--- movies
---------------------------------------------------
-drop table if exists movies;
-CREATE EXTERNAL TABLE IF NOT EXISTS movies
-(
-    id          BIGINT,
-    movie_asin  STRING,
-    movie_title STRING,
-    score       FLOAT,
-    rated       STRING,
-    language    STRING,
-    review_num  INT
+    TBLPROPERTIES ("skip.header.line.count"="1");
+
+
+DROP TABLE IF EXISTS movies_ext;
+CREATE EXTERNAL TABLE movies_ext (
+                                     id BIGINT,
+                                     movie_asin STRING,
+                                     movie_title STRING,
+                                     score FLOAT,
+                                     rated STRING,
+                                     language STRING,
+                                     review_num INT
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/movies/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
+    TBLPROPERTIES ("skip.header.line.count"="1");
 
---------------------------------------------------
--- movie_actors
---------------------------------------------------
-drop table if exists movie_actors;
-CREATE EXTERNAL TABLE IF NOT EXISTS movie_actors
-(
-    movie_id BIGINT,
-    actor_id BIGINT
+
+DROP TABLE IF EXISTS movie_actors_ext;
+CREATE EXTERNAL TABLE movie_actors_ext (
+                                           movie_id BIGINT,
+                                           actor_id BIGINT
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/movie_actors/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
+    TBLPROPERTIES ("skip.header.line.count"="1");
 
---------------------------------------------------
--- movie_directors
---------------------------------------------------
-drop table if exists movie_directors;
-CREATE EXTERNAL TABLE IF NOT EXISTS movie_directors
-(
-    movie_id    BIGINT,
-    director_id BIGINT
+
+DROP TABLE IF EXISTS movie_directors_ext;
+CREATE EXTERNAL TABLE movie_directors_ext (
+                                              movie_id BIGINT,
+                                              director_id BIGINT
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/movie_directors/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
+    TBLPROPERTIES ("skip.header.line.count"="1");
 
---------------------------------------------------
--- movie_genres
---------------------------------------------------
-drop table if exists movie_genres;
-CREATE EXTERNAL TABLE IF NOT EXISTS movie_genres
-(
-    id       BIGINT,
-    movie_id BIGINT,
-    genre    STRING
+
+DROP TABLE IF EXISTS movie_genres_ext;
+CREATE EXTERNAL TABLE movie_genres_ext (
+                                           id BIGINT,
+                                           movie_id BIGINT,
+                                           genre STRING
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/movie_genres/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
+    TBLPROPERTIES ("skip.header.line.count"="1");
 
---------------------------------------------------
--- movie_editions
---------------------------------------------------
-drop table if exists movie_editions;
-CREATE EXTERNAL TABLE IF NOT EXISTS movie_editions
-(
-    id       BIGINT,
-    movie_id BIGINT,
-    edition  STRING
+
+DROP TABLE IF EXISTS movie_editions_ext;
+CREATE EXTERNAL TABLE movie_editions_ext (
+                                             id BIGINT,
+                                             movie_id BIGINT,
+                                             edition STRING
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/movie_editions/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
+    TBLPROPERTIES ("skip.header.line.count"="1");
 
---------------------------------------------------
--- release_dates
---------------------------------------------------
-drop table if exists release_dates;
-CREATE EXTERNAL TABLE IF NOT EXISTS release_dates
-(
-    id       BIGINT,
-    movie_id BIGINT,
-    year     INT,
-    month    TINYINT,
-    day      TINYINT,
-    weekday  TINYINT
+
+DROP TABLE IF EXISTS release_dates_ext;
+CREATE EXTERNAL TABLE release_dates_ext (
+                                            id BIGINT,
+                                            movie_id BIGINT,
+                                            year INT,
+                                            month TINYINT,
+                                            day TINYINT,
+                                            weekday TINYINT
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/release_dates/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
+    TBLPROPERTIES ("skip.header.line.count"="1");
 
---------------------------------------------------
--- reviews
---------------------------------------------------
-drop table if exists reviews;
-CREATE EXTERNAL TABLE IF NOT EXISTS reviews
-(
-    id           BIGINT,
-    review_uuid  STRING,
-    movie_id     BIGINT,
-    helpfulness  STRING,
-    profile_name STRING,
-    score        TINYINT,
-    created_ts   BIGINT,
-    summary      STRING,
-    content      STRING,
-    user_id      STRING
+
+DROP TABLE IF EXISTS reviews_ext;
+CREATE EXTERNAL TABLE reviews_ext (
+                                      id BIGINT,
+                                      review_uuid STRING,
+                                      movie_id BIGINT,
+                                      helpfulness STRING,
+                                      profile_name STRING,
+                                      score TINYINT,
+                                      created_ts BIGINT,
+                                      summary STRING,
+                                      content STRING,
+                                      user_id STRING
 )
     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-        WITH SERDEPROPERTIES ("separatorChar" = ",","quoteChar" = "\"")
+        WITH SERDEPROPERTIES ("separatorChar"=",","quoteChar"="\"")
     STORED AS TEXTFILE
     LOCATION 'file:///opt/hive/external/reviews/'
-    TBLPROPERTIES ("skip.header.line.count" = "1");
+    TBLPROPERTIES ("skip.header.line.count"="1");
+
+--------------------------------------------------
+-- DWD 内部表（ORC，名称保持原名）
+--------------------------------------------------
+
+DROP TABLE IF EXISTS actors;
+CREATE TABLE actors (
+                        id BIGINT,
+                        name STRING
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE actors SELECT * FROM actors_ext;
+
+
+DROP TABLE IF EXISTS directors;
+CREATE TABLE directors (
+                           id BIGINT,
+                           name STRING
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE directors SELECT * FROM directors_ext;
+
+
+DROP TABLE IF EXISTS movies;
+CREATE TABLE movies (
+                        id BIGINT,
+                        movie_asin STRING,
+                        movie_title STRING,
+                        score FLOAT,
+                        rated STRING,
+                        language STRING,
+                        review_num INT
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE movies SELECT * FROM movies_ext;
+
+
+DROP TABLE IF EXISTS movie_actors;
+CREATE TABLE movie_actors (
+                              movie_id BIGINT,
+                              actor_id BIGINT
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE movie_actors SELECT * FROM movie_actors_ext;
+
+
+DROP TABLE IF EXISTS movie_directors;
+CREATE TABLE movie_directors (
+                                 movie_id BIGINT,
+                                 director_id BIGINT
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE movie_directors SELECT * FROM movie_directors_ext;
+
+
+DROP TABLE IF EXISTS movie_genres;
+CREATE TABLE movie_genres (
+                              id BIGINT,
+                              movie_id BIGINT,
+                              genre STRING
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE movie_genres SELECT * FROM movie_genres_ext;
+
+
+DROP TABLE IF EXISTS movie_editions;
+CREATE TABLE movie_editions (
+                                id BIGINT,
+                                movie_id BIGINT,
+                                edition STRING
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE movie_editions SELECT * FROM movie_editions_ext;
+
+
+DROP TABLE IF EXISTS release_dates;
+CREATE TABLE release_dates (
+                               id BIGINT,
+                               movie_id BIGINT,
+                               year INT,
+                               month TINYINT,
+                               day TINYINT,
+                               weekday TINYINT
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE release_dates SELECT * FROM release_dates_ext;
+
+
+SET hive.stats.autogather=false;
+SET hive.stats.column.autogather=false;
+DROP TABLE IF EXISTS reviews;
+CREATE TABLE reviews (
+                         id BIGINT,
+                         review_uuid STRING,
+                         movie_id BIGINT,
+                         helpfulness STRING,
+                         profile_name STRING,
+                         score TINYINT,
+                         created_ts BIGINT,
+                         summary STRING,
+                         content STRING,
+                         user_id STRING
+)
+    STORED AS ORC
+    TBLPROPERTIES ('orc.compress'='SNAPPY');
+INSERT OVERWRITE TABLE reviews SELECT * FROM reviews_ext;
 
 drop table if exists movie_denormalization;
 CREATE TABLE IF NOT EXISTS movie_denormalization
@@ -202,6 +289,7 @@ CREATE TABLE IF NOT EXISTS actor_director_cooperation
     director_name STRING,
     movie_num     INT
 )
+CLUSTERED BY (actor_id) INTO 8 BUCKETS
 STORED AS ORC;
 
 drop table if exists actor_stats;

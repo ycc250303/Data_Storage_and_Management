@@ -1,11 +1,17 @@
 import http from "@/utils/http";
 import axios from "axios";
-import { mockListMovies, mockStats } from "@/mock/mockService";
+import { mockListMovies } from "@/mock/mockService";
 
 // Hive 专用的 axios 实例，端口为 8081
 const hiveHttp = axios.create({
   baseURL: "http://localhost:8081",
-  timeout: 60000, // Hive 查询可能较慢，增加超时时间
+  timeout: 120000, // Hive 查询可能较慢，增加超时时间
+});
+
+// Neo4j 专用的 axios 实例，端口为 3000
+const neo4jHttp = axios.create({
+  baseURL: "http://106.15.53.23:3000",
+  timeout: 20000,
 });
 
 // 响应拦截器：打印响应日志并直接返回数据
@@ -16,6 +22,17 @@ hiveHttp.interceptors.response.use(
   },
   (error) => {
     console.error("[Hive Response Error]", error);
+    return Promise.reject(error);
+  }
+);
+
+neo4jHttp.interceptors.response.use(
+  (response) => {
+    console.log(`[Neo4j Response] ${response.config.method.toUpperCase()} ${response.config.url}`, response.data);
+    return response.data;
+  },
+  (error) => {
+    console.error("[Neo4j Response Error]", error);
     return Promise.reject(error);
   }
 );
@@ -62,11 +79,8 @@ export async function queryByGenre(params) {
     const res = await http.get('/queries/genre', { params })
     return res || res.data || { items: [], total: 0 }
   } catch (err) {
-    // use movie stats mock to build genre list
-    const s = await mockStats()
-    // convert to items array
-    const items = Object.entries(s.byGenre || {}).map(([genre, count]) => ({ genre, count }))
-    return { items, total: items.length }
+    // fallback: return empty list when mock is gone
+    return { items: [], total: 0 }
   }
 }
 
@@ -90,6 +104,106 @@ export async function queryRelation(params) {
   }
 }
 
+export async function getActorCollaborations(params) {
+  try {
+    const res = await neo4jHttp.get('/api/neo4j/stats/collaborations', { params });
+    return res;
+  } catch (err) {
+    console.error("getActorCollaborations failed", err);
+    return [];
+  }
+}
+
+export async function getDirectorActorCollaborations(params) {
+  try {
+    const res = await neo4jHttp.get('/api/neo4j/stats/director-actor', { params });
+    return res;
+  } catch (err) {
+    console.error("getDirectorActorCollaborations failed", err);
+    return [];
+  }
+}
+
+export async function getActorAttention(params) {
+  try {
+    const res = await neo4jHttp.get('/api/neo4j/stats/collaborations_reviews', { params });
+    return res;
+  } catch (err) {
+    console.error("getActorAttention failed", err);
+    return [];
+  }
+}
+
+export async function getDirectorActorAttention(params) {
+  try {
+    const res = await neo4jHttp.get('/api/neo4j/stats/director-actor_reviews', { params });
+    return res;
+  } catch (err) {
+    console.error("getDirectorActorAttention failed", err);
+    return [];
+  }
+}
+
+export async function getActorAttentionByGenre(params) {
+  try {
+    const res = await neo4jHttp.get('/api/neo4j/stats/collaborations_by_genre', { params });
+    return res;
+  } catch (err) {
+    console.error("getActorAttentionByGenre failed", err);
+    return [];
+  }
+}
+
+export async function getDirectorActorAttentionByGenre(params) {
+  try {
+    const res = await neo4jHttp.get('/api/neo4j/stats/director-actor_by_genre', { params });
+    return res;
+  } catch (err) {
+    console.error("getDirectorActorAttentionByGenre failed", err);
+    return [];
+  }
+}
+
+export async function getHiveActorCollaborations(params) {
+  try {
+    const res = await hiveHttp.get('/api/hive/actor/collaborations', { params });
+    return res;
+  } catch (err) {
+    console.error("getHiveActorCollaborations failed", err);
+    return [];
+  }
+}
+
+export async function getHiveDirectorActorCollaborations(params) {
+  try {
+    const res = await hiveHttp.get('/api/hive/actor/director-collaborations', { params });
+    return res;
+  } catch (err) {
+    console.error("getHiveDirectorActorCollaborations failed", err);
+    return [];
+  }
+}
+
+export async function getHiveActorAttention(params) {
+  try {
+    const res = await hiveHttp.get('/api/hive/actor/collaborations-reviews', { params });
+    return res;
+  } catch (err) {
+    console.error("getHiveActorAttention failed", err);
+    return [];
+  }
+}
+
+export async function getHiveDirectorActorAttention(params) {
+  try {
+    const res = await hiveHttp.get('/api/hive/actor/director-collaborations-reviews', { params });
+    return res;
+  } catch (err) {
+    console.error("getHiveDirectorActorAttention failed", err);
+    return [];
+  }
+}
+
 export async function compareTiming(params) {
   try {
     const res = await http.get('/queries/compare', { params })
@@ -103,6 +217,7 @@ export async function compareTiming(params) {
 
 export async function complexQuery(filters) {
   const mode = filters.mode || "multi";
+  const selectedDBs = filters.databases || ["mysql", "hive"];
   const searchDto = {
     movieTitle: filters.title || "",
     actorName: filters.actor || "",
@@ -112,55 +227,75 @@ export async function complexQuery(filters) {
     endYear: filters.yearTo || 0,
     minScore: filters.minRating || 0,
     maxScore: filters.maxRating || 5,
-    size: filters.limit || 20,
+    size: 20,
     page: -1,
   };
 
   if (filters.releaseDate) {
-    const d = new Date(filters.releaseDate);
-    searchDto.month = d.getMonth() + 1;
-    searchDto.day = d.getDate();
+    const parts = filters.releaseDate.split("-");
+    if (parts.length >= 2) {
+      searchDto.month = parseInt(parts[1], 10);
+    }
+    if (parts.length >= 3) {
+      searchDto.day = parseInt(parts[2], 10);
+    }
   }
 
-  console.log(`[API] complexQuery (${mode}) starting both MySQL and Hive queries...`);
+  console.log(`[API] complexQuery (${mode}) starting selected queries:`, selectedDBs);
 
-  // 同时发起 MySQL 和 Hive 查询
-  const mysqlEndpoint = mode === "wide" ? "/api/mysql/movie/search/fast" : "/api/mysql/movie/search";
-  const hiveEndpoint = mode === "wide" ? "/api/hive/movie/search/fast" : "/api/hive/movie/search";
+  const promises = [];
+  const mysqlIndex = 0;
+  const hiveIndex = selectedDBs.includes("mysql") ? 1 : 0;
 
-  const mysqlPromise = http.post(mysqlEndpoint, searchDto).catch((err) => {
-    console.error("[MySQL Query Error]", err);
-    return { data: [], totalExecutionTime: 0 };
-  });
+  if (selectedDBs.includes("mysql")) {
+    const mysqlEndpoint = mode === "wide" ? "/api/mysql/movie/search/fast" : "/api/mysql/movie/search";
+    promises.push(
+      http.post(mysqlEndpoint, searchDto).catch((err) => {
+        console.error("[MySQL Query Error]", err);
+        return { data: [], totalExecutionTime: 0 };
+      })
+    );
+  } else {
+    promises.push(Promise.resolve(null));
+  }
 
-  const hivePromise = hiveHttp.post(hiveEndpoint, searchDto).catch((err) => {
-    console.error("[Hive Query Error]", err);
-    return { data: [], totalExecutionTime: 0 };
-  });
+  if (selectedDBs.includes("hive")) {
+    const hiveEndpoint = mode === "wide" ? "/api/hive/movie/search/fast" : "/api/hive/movie/search";
+    promises.push(
+      hiveHttp.post(hiveEndpoint, searchDto).catch((err) => {
+        console.error("[Hive Query Error]", err);
+        return { data: [], totalExecutionTime: 0 };
+      })
+    );
+  } else {
+    promises.push(Promise.resolve(null));
+  }
 
   try {
-    // 等待两个查询都完成
-    const [mysqlRes, hiveRes] = await Promise.all([mysqlPromise, hivePromise]);
+    const [mysqlRes, hiveRes] = await Promise.all(promises);
 
-    const items = Array.isArray(mysqlRes) ? mysqlRes : mysqlRes?.data || [];
-    const mysqlTime = mysqlRes?.totalExecutionTime || 0;
-    const hiveTime = hiveRes?.totalExecutionTime || 0;
+    // 数据显示优先级：MySQL (如果选了) > Hive
+    let finalRes = mysqlRes || hiveRes;
+    const items = Array.isArray(finalRes) ? finalRes : finalRes?.data || [];
 
-    console.log(`[API] Queries finished. MySQL: ${mysqlTime}ms, Hive: ${hiveTime}ms`);
+    const byStorage = {};
+    const sample = { query: mode === "wide" ? "组合查询 (宽表)" : "组合查询 (多表)" };
+
+    if (mysqlRes) {
+      const mysqlTime = mysqlRes.totalExecutionTime || 0;
+      byStorage.mysql = mysqlTime;
+      sample.mysql = mysqlTime;
+    }
+    if (hiveRes) {
+      const hiveTime = hiveRes.totalExecutionTime || 0;
+      byStorage.hive = hiveTime;
+      sample.hive = hiveTime;
+    }
 
     return {
-      items: items, // 使用 MySQL 返回的结果展示表格
-      byStorage: {
-        mysql: mysqlTime,
-        hive: hiveTime,
-      },
-      samples: [
-        {
-          query: mode === "wide" ? "组合查询 (宽表)" : "组合查询 (多表)",
-          mysql: mysqlTime,
-          hive: hiveTime,
-        },
-      ],
+      items: items,
+      byStorage,
+      samples: [sample],
     };
   } catch (err) {
     console.error("[API] complexQuery failed", err);

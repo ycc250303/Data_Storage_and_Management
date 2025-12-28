@@ -39,4 +39,29 @@ public interface MovieService {
      * 利用宽表进行组合查询
      */
     List<MovieDetailDto> searchMoviesByWideTable(MovieSearchDto dto);
+
+    /**
+     * 获取演员合作统计
+     */
+    List<Map<String, Object>> getActorCollaborations(int limit);
+
+    /**
+     * 获取带类别的演员合作统计（合作次数）
+     */
+    List<Map<String, Object>> getActorCollaborationsByGenre(String genre, int limit);
+
+    /**
+     * 获取导演-演员合作统计（合作次数）
+     */
+    List<Map<String, Object>> getDirectorActorCollaborations(String genre, int limit);
+
+    /**
+     * 获取演员组合关注度统计（评论最多）
+     */
+    List<Map<String, Object>> getActorCollaborationsByReviews(String genre, int limit);
+
+    /**
+     * 获取导演-演员组合关注度统计（评论最多）
+     */
+    List<Map<String, Object>> getDirectorActorCollaborationsByReviews(String genre, int limit);
 }

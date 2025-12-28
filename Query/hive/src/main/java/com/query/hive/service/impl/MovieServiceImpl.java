@@ -2,6 +2,9 @@ package com.query.hive.service.impl;
 
 import com.query.hive.dto.MovieDetailDto;
 import com.query.hive.dto.MovieSearchDto;
+import com.query.hive.entity.ActorsCooperation;
+import com.query.hive.mapper.ActorsCooperationMapper;
+import com.query.hive.mapper.ActorDirectorCooperationMapper;
 import com.query.hive.mapper.MoviesMapper;
 import com.query.hive.service.MovieService;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Hive电影服务实现类
@@ -22,6 +26,12 @@ public class MovieServiceImpl implements MovieService {
 
     @Autowired
     private MoviesMapper moviesMapper;
+
+    @Autowired
+    private ActorsCooperationMapper actorsCooperationMapper;
+
+    @Autowired
+    private ActorDirectorCooperationMapper actorDirectorCooperationMapper;
 
     @Override
     public List<Map<String, Object>> getMovieEditions(String movieTitle) {
@@ -255,5 +265,40 @@ public class MovieServiceImpl implements MovieService {
 
         log.info("宽表查询完成，返回记录数：{}", movieDetailDtoList.size());
         return movieDetailDtoList;
+    }
+
+    @Override
+    public List<Map<String, Object>> getActorCollaborations(int limit) {
+        List<ActorsCooperation> collaborations = actorsCooperationMapper.getCollaborations(limit);
+        return collaborations.stream().map(c -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("actor1", c.getActor1Name());
+            map.put("actor2", c.getActor2Name());
+            map.put("collaborations", c.getMovieNum());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> getActorCollaborationsByGenre(String genre, int limit) {
+        return actorsCooperationMapper.getCollaborationsByGenre(genre, limit);
+    }
+
+    @Override
+    public List<Map<String, Object>> getDirectorActorCollaborations(String genre, int limit) {
+        if (genre != null && !genre.isEmpty()) {
+            return actorDirectorCooperationMapper.getDirectorActorCollaborations(genre, limit);
+        }
+        return actorDirectorCooperationMapper.getBaseDirectorActorCollaborations(limit);
+    }
+
+    @Override
+    public List<Map<String, Object>> getActorCollaborationsByReviews(String genre, int limit) {
+        return actorsCooperationMapper.getCollaborationsByReviews(genre, limit);
+    }
+
+    @Override
+    public List<Map<String, Object>> getDirectorActorCollaborationsByReviews(String genre, int limit) {
+        return actorDirectorCooperationMapper.getDirectorActorCollaborationsByReviews(genre, limit);
     }
 }

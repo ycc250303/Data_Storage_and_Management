@@ -16,4 +16,59 @@
         actor_id, director_id, actor_name, director_name, movie_num
     </sql>
 
+    <select id="getBaseDirectorActorCollaborations" resultType="map">
+        SELECT
+            director_name as director,
+            actor_name as actor,
+            movie_num as collaborations
+        FROM actor_director_cooperation
+        ORDER BY movie_num DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getDirectorActorCollaborations" resultType="map">
+        SELECT
+            d.name as director,
+            a.name as actor,
+            COUNT(DISTINCT md.movie_id) as collaborations
+        FROM movie_directors md
+        JOIN movie_actors ma ON md.movie_id = ma.movie_id
+        JOIN directors d ON md.director_id = d.id
+        JOIN actors a ON ma.actor_id = a.id
+        <if test="genre != null and genre != ''">
+            JOIN movie_genres mg ON md.movie_id = mg.movie_id
+        </if>
+        <where>
+            <if test="genre != null and genre != ''">
+                mg.genre = #{genre}
+            </if>
+        </where>
+        GROUP BY d.name, a.name
+        ORDER BY collaborations DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getDirectorActorCollaborationsByReviews" resultType="map">
+        SELECT
+            d.name as director,
+            a.name as actor,
+            SUM(m.review_num) as review_sum
+        FROM movie_directors md
+        JOIN movie_actors ma ON md.movie_id = ma.movie_id
+        JOIN directors d ON md.director_id = d.id
+        JOIN actors a ON ma.actor_id = a.id
+        JOIN movies m ON md.movie_id = m.id
+        <if test="genre != null and genre != ''">
+            JOIN movie_genres mg ON md.movie_id = mg.movie_id
+        </if>
+        <where>
+            <if test="genre != null and genre != ''">
+                mg.genre = #{genre}
+            </if>
+        </where>
+        GROUP BY d.name, a.name
+        ORDER BY review_sum DESC
+        LIMIT #{limit}
+    </select>
+
 </mapper>

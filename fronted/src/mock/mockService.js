@@ -29,18 +29,6 @@ export function mockGetMovie(id) {
   })
 }
 
-export function mockStats() {
-  const byGenre = {}
-  movies.forEach(m => {
-    (m.genres || []).forEach(g => {
-      byGenre[g] = (byGenre[g] || 0) + 1
-    })
-  })
-  return new Promise(resolve => {
-    setTimeout(() => resolve({ total: movies.length, byGenre }), 120)
-  })
-}
-
 export function mockCompareTimes() {
   // sample timing data for demo (ms)
   const byStorage = { mysql: 420, hive: 1200, neo4j: 90 }
@@ -75,7 +63,7 @@ export function mockComplexQuery(filters = {}) {
     if (filters.yearTo && (m.year || 0) > filters.yearTo) return false
     if (filters.minRating && (m.rating || 0) < filters.minRating) return false
     if (filters.maxRating && (m.rating || 0) > filters.maxRating) return false
-    if (filters.releaseDate && (m.releaseDate || '') !== filters.releaseDate) return false
+    if (filters.releaseDate && !(m.releaseDate || '').startsWith(filters.releaseDate)) return false
     return true
   })
 
