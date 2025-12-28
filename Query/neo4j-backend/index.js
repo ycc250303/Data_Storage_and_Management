@@ -376,5 +376,3 @@ process.on('SIGINT', async () => {
   await driver.close();
   process.exit(0);
 });
-
-
