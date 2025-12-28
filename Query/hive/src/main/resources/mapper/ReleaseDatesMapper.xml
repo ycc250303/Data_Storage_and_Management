@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.query.hive.mapper.ReleaseDatesMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.query.hive.entity.ReleaseDates">
+        <id column="id" property="id" />
+        <result column="movie_id" property="movieId" />
+        <result column="year" property="year" />
+        <result column="month" property="month" />
+        <result column="day" property="day" />
+        <result column="weekday" property="weekday" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, movie_id, year, month, day, weekday
+    </sql>
+
+    <!-- 查询年月电影统计 -->
+    <select id="getMovieCountByYearAndMonth" resultType="java.util.Map">
+        SELECT 
+            COUNT(DISTINCT m.id) AS total_movies,
+            AVG(m.score) AS avg_score
+        FROM 
+            movies m
+        INNER JOIN 
+            release_dates rd ON m.id = rd.movie_id
+        WHERE 
+            rd.year = #{year} AND rd.month = #{month}
+        GROUP BY 
+            rd.year, rd.month
+    </select>
+
+    <!-- 查询年季度电影统计 -->
+    <select id="getMovieCountByYearAndQuarter" resultType="java.util.Map">
+        SELECT 
+            COUNT(DISTINCT m.id) AS total_movies,
+            AVG(m.score) AS avg_score
+        FROM 
+            movies m
+        INNER JOIN 
+            release_dates rd ON m.id = rd.movie_id
+        WHERE 
+            rd.year = #{year} AND 
+            CASE 
+                WHEN #{quarter} = 1 THEN rd.month BETWEEN 1 AND 3
+                WHEN #{quarter} = 2 THEN rd.month BETWEEN 4 AND 6
+                WHEN #{quarter} = 3 THEN rd.month BETWEEN 7 AND 9
+                WHEN #{quarter} = 4 THEN rd.month BETWEEN 10 AND 12
+            END
+        GROUP BY 
+            rd.year
+    </select>
+
+    <!-- 查询星期几上映电影统计 -->
+    <select id="getMovieCountByWeekday" resultType="java.util.Map">
+        SELECT 
+            COUNT(DISTINCT m.id) AS total_movies,
+            AVG(m.score) AS avg_score,
+            CASE rd.weekday 
+                WHEN 0 THEN '周一' 
+                WHEN 1 THEN '周二' 
+                WHEN 2 THEN '周三' 
+                WHEN 3 THEN '周四' 
+                WHEN 4 THEN '周五' 
+                WHEN 5 THEN '周六' 
+                WHEN 6 THEN '周日' 
+            END AS weekday_name 
+        FROM 
+            movies m
+        INNER JOIN 
+            release_dates rd ON m.id = rd.movie_id
+        WHERE 
+            rd.weekday = #{weekday}
+        GROUP BY 
+            rd.weekday
+    </select>
+
+    <!-- 查询年份电影统计 -->
+    <select id="getMovieCountByYear" resultType="java.util.Map">
+        SELECT 
+            rd.year AS release_year,
+            COUNT(DISTINCT m.id) AS total_movies,
+            AVG(m.score) AS avg_score
+        FROM 
+            movies m
+        INNER JOIN 
+            release_dates rd ON m.id = rd.movie_id
+        WHERE 
+            rd.year = #{year}
+        GROUP BY 
+            rd.year
+    </select>
+</mapper>

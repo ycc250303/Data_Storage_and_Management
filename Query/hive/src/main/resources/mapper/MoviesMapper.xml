@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.query.hive.mapper.MoviesMapper">
+    
+    <!-- 电影详情结果映射 -->
+    <resultMap id="MovieDetailResultMap" type="java.util.Map">
+        <id column="movie_asin" property="movieAsin" />
+        <result column="movie_title" property="movieTitle" />
+        <result column="score" property="movieScore" />
+        <result column="actors" property="actors" />
+        <result column="directors" property="directors" />
+        <result column="genres" property="movieGenre" />
+        <result column="release_date" property="date" />
+        <result column="editions" property="edition" />
+    </resultMap>
+    
+    <!-- 根据电影标题获取电影版本 -->
+    <select id="getMovieEditionsByMovieTitle" resultType="java.util.Map">
+        SELECT 
+            m.movie_title,
+            m.movie_asin,
+            collect_list(me.edition) AS editions
+        FROM 
+            movies m
+        LEFT JOIN 
+            movie_editions me ON m.id = me.movie_id
+        <where>
+            <if test="movieTitle != null and movieTitle != ''">
+                m.movie_title LIKE CONCAT('%', ${movieTitle}, '%')
+            </if>
+        </where>
+        GROUP BY 
+            m.movie_title, m.movie_asin
+        ORDER BY 
+            m.movie_title
+    </select>
+    
+    <!-- 根据电影标题获取电影版本数量 -->
+    <select id="getMovieEditionCountByMovieTitle" resultType="java.util.Map">
+        SELECT 
+            m.movie_title,
+            COUNT(DISTINCT me.edition) AS edition_count
+        FROM 
+            movies m
+        LEFT JOIN 
+            movie_editions me ON m.id = me.movie_id
+        <where>
+            <if test="movieTitle != null and movieTitle != ''">
+                m.movie_title LIKE CONCAT('%', ${movieTitle}, '%')
+            </if>
+        </where>
+        GROUP BY 
+            m.movie_title
+        ORDER BY 
+            m.movie_title
+    </select>
+
+    <!-- 根据类型获取电影数量 -->
+    <select id="getMovieCountByGenre" resultType="java.util.Map">
+        SELECT 
+            mg.genre AS movie_genre,
+            COUNT(DISTINCT m.id) AS movie_count
+        FROM 
+            movies m
+        JOIN 
+            movie_genres mg ON m.id = mg.movie_id
+        <where>
+            <if test="movieGenre != null and movieGenre != ''">
+                mg.genre = '${movieGenre}'
+            </if>
+        </where>
+        GROUP BY 
+            mg.genre
+        ORDER BY 
+            mg.genre
+    </select>
+
+    <!-- 根据类型获取电影名称列表 -->
+    <select id="getMoviesByGenreName" resultType="java.util.Map">
+        SELECT DISTINCT
+            m.movie_title
+        FROM 
+            movies m
+        JOIN 
+            movie_genres mg ON m.id = mg.movie_id
+        <where>
+            <if test="movieGenre != null and movieGenre != ''">
+                mg.genre = '${movieGenre}'
+            </if>
+        </where>
+        ORDER BY 
+            m.movie_title
+        LIMIT 1000
+    </select>
+
+    <!-- 组合查询电影信息 (适配Hive语法) -->
+    <select id="getMoviesByCombinedConditions" resultMap="MovieDetailResultMap">
+        <!-- ... 原有的方法保持不变，作为备用 ... -->
+        SELECT 
+            m.movie_asin,
+            m.movie_title,
+            m.score,
+            concat_ws(',', collect_list(a.name)) AS actors,
+            concat_ws(',', collect_list(d.name)) AS directors,
+            concat_ws(',', collect_list(mg.genre)) AS genres,
+            concat(rd.year, '-', lpad(rd.month, 2, '0'), '-', lpad(rd.day, 2, '0')) AS release_date,
+            concat_ws(',', collect_list(me.edition)) AS editions
+        FROM 
+            movies m
+        LEFT JOIN 
+            movie_actors ma ON m.id = ma.movie_id
+        LEFT JOIN 
+            actors a ON ma.actor_id = a.id
+        LEFT JOIN 
+            movie_directors md ON m.id = md.movie_id
+        LEFT JOIN 
+            directors d ON md.director_id = d.id
+        LEFT JOIN 
+            movie_genres mg ON m.id = mg.movie_id
+        LEFT JOIN 
+            release_dates rd ON m.id = rd.movie_id
+        LEFT JOIN 
+            movie_editions me ON m.id = me.movie_id
+        <where>
+        <if test="dto.movieTitle != null and dto.movieTitle != ''">
+                m.movie_title LIKE CONCAT('%', ${dto.movieTitle}, '%')
+        </if>
+        <if test="dto.actorName != null and dto.actorName != ''">
+                AND a.name LIKE CONCAT('%', ${dto.actorName}, '%')
+        </if>
+        <if test="dto.directorName != null and dto.directorName != ''">
+                AND d.name LIKE CONCAT('%', ${dto.directorName}, '%')
+        </if>
+        <if test="dto.movieGenre != null and dto.movieGenre != ''">
+                AND array_contains(collect_set(mg.genre), '${dto.movieGenre}')
+        </if>
+        <if test="dto.startYear > 0">
+                AND rd.year &gt;= ${dto.startYear}
+        </if>
+        <if test="dto.endYear > 0">
+                AND rd.year &lt;= ${dto.endYear}
+        </if>
+        <if test="dto.month > 0">
+                AND rd.month = ${dto.month}
+        </if>
+        <if test="dto.day > 0">
+                AND rd.day = ${dto.day}
+        </if>
+        <if test="dto.minScore >= 0">
+                AND m.score &gt;= ${dto.minScore}
+        </if>
+        <if test="dto.maxScore > 0">
+                AND m.score &lt;= ${dto.maxScore}
+        </if>
+        </where>
+        GROUP BY 
+            m.id, m.movie_asin, m.movie_title, m.score, rd.year, rd.month, rd.day
+        ORDER BY 
+            m.movie_title
+        <!-- 根据size值判断是否需要分页 -->
+        <if test="dto.size &lt; 2147483647">
+            LIMIT ${dto.size} OFFSET ${dto.page}
+        </if>
+    </select>
+
+    <!-- 第一步：子查询过滤优化（极大地减少 Join 数据量） -->
+    <select id="selectMovieIdsByConditions" resultType="int">
+        SELECT m.id
+        FROM movies m
+        <if test="dto.actorName != null and dto.actorName != ''">
+            INNER JOIN (
+                SELECT DISTINCT ma.movie_id 
+                FROM movie_actors ma 
+                JOIN actors a ON ma.actor_id = a.id 
+                WHERE LOWER(a.name) LIKE CONCAT('%', #{dto.movieTitle}, '%') 
+            ) a_filt ON m.id = a_filt.movie_id
+        </if>
+        <if test="dto.directorName != null and dto.directorName != ''">
+            INNER JOIN (
+                SELECT DISTINCT md.movie_id 
+                FROM movie_directors md 
+                JOIN directors d ON md.director_id = d.id 
+                WHERE LOWER(d.name) LIKE CONCAT('%', #{dto.directorName}, '%')
+            ) d_filt ON m.id = d_filt.movie_id
+        </if>
+        <if test="dto.movieGenre != null and dto.movieGenre != ''">
+            INNER JOIN (
+                SELECT DISTINCT mg.movie_id 
+                FROM movie_genres mg 
+                WHERE LOWER(mg.genre) LIKE CONCAT('%', #{dto.movieGenre}, '%')
+            ) g_filt ON m.id = g_filt.movie_id
+        </if>
+        <if test="dto.startYear > 0 or dto.endYear > 0 or dto.month > 0 or dto.day > 0">
+            INNER JOIN (
+                SELECT movie_id 
+                FROM release_dates rd 
+                WHERE 1=1
+                <if test="dto.startYear > 0">AND rd.year &gt;= #{dto.startYear}</if>
+                <if test="dto.endYear > 0">AND rd.year &lt;= #{dto.endYear}</if>
+                <if test="dto.month > 0">AND rd.month = #{dto.month}</if>
+                <if test="dto.day > 0">AND rd.day = #{dto.day}</if>
+            ) r_filt ON m.id = r_filt.movie_id
+        </if>
+        <where>
+            <if test="dto.movieTitle != null and dto.movieTitle != ''">
+                AND LOWER(m.movie_title) LIKE CONCAT('%', #{dto.movieTitle}, '%')
+        </if>
+        <if test="dto.minScore >= 0">
+            AND m.score &gt;= #{dto.minScore}
+        </if>
+        <if test="dto.maxScore > 0">
+            AND m.score &lt;= #{dto.maxScore}
+        </if>
+        </where>
+        ORDER BY m.movie_title
+        <if test="dto.size != null and dto.size &lt; 2147483647">
+            LIMIT #{dto.size} OFFSET #{dto.page}
+        </if>
+    </select>
+
+    <!-- 第二步：针对 20 个 ID 进行子查询预聚合（极其高效） -->
+    <select id="selectMoviesBatch" resultMap="MovieDetailResultMap">
+        SELECT 
+            m.movie_asin AS movie_asin,
+            m.movie_title AS movie_title,
+            m.score AS score,
+            act.actors,
+            dir.directors,
+            gen.genres,
+            concat(rd.year, '-', lpad(rd.month, 2, '0'), '-', lpad(rd.day, 2, '0')) AS release_date,
+            edi.editions
+        FROM 
+            (SELECT id, movie_asin, movie_title, score FROM movies WHERE id IN 
+                <foreach collection="movieIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+            ) m
+        LEFT JOIN (
+            SELECT ma.movie_id, concat_ws(',', collect_set(a.name)) AS actors 
+            FROM movie_actors ma JOIN actors a ON ma.actor_id = a.id 
+            WHERE ma.movie_id IN <foreach collection="movieIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+            GROUP BY ma.movie_id
+        ) act ON m.id = act.movie_id
+        LEFT JOIN (
+            SELECT md.movie_id, concat_ws(',', collect_set(d.name)) AS directors 
+            FROM movie_directors md JOIN directors d ON md.director_id = d.id 
+            WHERE md.movie_id IN <foreach collection="movieIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+            GROUP BY md.movie_id
+        ) dir ON m.id = dir.movie_id
+        LEFT JOIN (
+            SELECT mg.movie_id, concat_ws(',', collect_set(mg.genre)) AS genres 
+            FROM movie_genres mg 
+            WHERE mg.movie_id IN <foreach collection="movieIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+            GROUP BY mg.movie_id
+        ) gen ON m.id = gen.movie_id
+        LEFT JOIN (
+            SELECT rd.movie_id, year, month, day 
+            FROM release_dates rd 
+            WHERE rd.movie_id IN <foreach collection="movieIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ) rd ON m.id = rd.movie_id
+        LEFT JOIN (
+            SELECT me.movie_id, concat_ws(',', collect_set(me.edition)) AS editions 
+            FROM movie_editions me 
+            WHERE me.movie_id IN <foreach collection="movieIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+            GROUP BY me.movie_id
+        ) edi ON m.id = edi.movie_id
+        ORDER BY m.movie_title
+    </select>
+
+    <!-- ========== 新的分步查询方法（减少JOIN开销） ========== -->
+    
+    <!-- 查询电影基本信息 -->
+    <select id="selectMoviesBasicInfo" resultType="java.util.Map">
+        SELECT 
+            id,
+            movie_asin AS movieAsin,
+            movie_title AS movieTitle,
+            score AS movieScore
+        FROM movies
+        WHERE id IN 
+        <foreach collection="movieIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY movie_title
+    </select>
+
+    <!-- 查询演员列表 -->
+    <select id="selectActorsByMovieIds" resultType="java.util.Map">
+        SELECT 
+            ma.movie_id AS key,
+            concat_ws(',', collect_set(a.name)) AS value
+        FROM movie_actors ma
+        JOIN actors a ON ma.actor_id = a.id
+        WHERE ma.movie_id IN 
+        <foreach collection="movieIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        GROUP BY ma.movie_id
+    </select>
+
+    <!-- 查询导演列表 -->
+    <select id="selectDirectorsByMovieIds" resultType="java.util.Map">
+        SELECT 
+            md.movie_id AS key,
+            concat_ws(',', collect_set(d.name)) AS value
+        FROM movie_directors md
+        JOIN directors d ON md.director_id = d.id
+        WHERE md.movie_id IN 
+        <foreach collection="movieIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        GROUP BY md.movie_id
+    </select>
+
+    <!-- 查询类型列表 -->
+    <select id="selectGenresByMovieIds" resultType="java.util.Map">
+        SELECT 
+            movie_id AS key,
+            concat_ws(',', collect_set(genre)) AS value
+        FROM movie_genres
+        WHERE movie_id IN 
+        <foreach collection="movieIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        GROUP BY movie_id
+    </select>
+
+    <!-- 查询发行日期 -->
+    <select id="selectReleaseDatesByMovieIds" resultType="java.util.Map">
+        SELECT 
+            movie_id AS key,
+            concat(year, '-', lpad(month, 2, '0'), '-', lpad(day, 2, '0')) AS value
+        FROM release_dates
+        WHERE movie_id IN 
+        <foreach collection="movieIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 查询版本信息 -->
+    <select id="selectEditionsByMovieIds" resultType="java.util.Map">
+        SELECT 
+            movie_id AS key,
+            concat_ws(',', collect_set(edition)) AS value
+        FROM movie_editions
+        WHERE movie_id IN 
+        <foreach collection="movieIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        GROUP BY movie_id
+    </select>
+
+    <!-- 基于宽表的极速查询实现 -->
+    <select id="selectMoviesFromWideTable" resultType="java.util.Map">
+        SELECT 
+            movie_asin AS movieasin,
+            movie_title AS movietitle,
+            movie_score AS moviescore,
+            concat_ws(',', actor_names) AS actors,
+            concat_ws(',', director_names) AS directors,
+            concat_ws(',', movie_genres) AS moviegenre,
+            CAST(release_date AS STRING) AS release_date,
+            concat_ws(',', edition_list) AS edition
+        FROM movie_denormalization
+        <where>
+            <!-- 分区剪枝：如果指定了年份，Hive 速度会极快 -->
+            <if test="dto.startYear > 0">
+                AND release_year &gt;= #{dto.startYear}
+            </if>
+            <if test="dto.endYear > 0">
+                AND release_year &lt;= #{dto.endYear}
+            </if>
+            
+            <if test="dto.movieTitle != null and dto.movieTitle != ''">
+                AND LOWER(movie_title) LIKE CONCAT('%', LOWER(#{dto.movieTitle}), '%')
+            </if>
+            
+            <if test="dto.actorName != null and dto.actorName != ''">
+                AND array_contains(actor_names, #{dto.actorName})
+            </if>
+            <if test="dto.directorName != null and dto.directorName != ''">
+                AND array_contains(director_names, #{dto.directorName})
+            </if>
+            <if test="dto.movieGenre != null and dto.movieGenre != ''">
+                AND array_contains(movie_genres, #{dto.movieGenre})
+            </if>
+
+            <if test="dto.month > 0">AND release_month = #{dto.month}</if>
+            <if test="dto.day > 0">AND release_day = #{dto.day}</if>
+            <if test="dto.minScore >= 0">AND movie_score &gt;= #{dto.minScore}</if>
+            <if test="dto.maxScore > 0">AND movie_score &lt;= #{dto.maxScore}</if>
+        </where>
+        ORDER BY movietitle
+        <if test="dto.size != null and dto.size &lt; 2147483647">
+            LIMIT #{dto.size} OFFSET #{dto.page}
+        </if>
+    </select>
+</mapper>

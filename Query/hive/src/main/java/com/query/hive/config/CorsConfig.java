@@ -1,4 +1,4 @@
-package com.query.mysql.config;
+package com.query.hive.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -19,4 +19,3 @@ public class CorsConfig implements WebMvcConfigurer {
                 .exposedHeaders("*");
     }
 }
-

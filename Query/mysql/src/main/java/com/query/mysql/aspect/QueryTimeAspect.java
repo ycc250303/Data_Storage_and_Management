@@ -1,11 +1,14 @@
-package com.query.hive.aspect;
+package com.query.mysql.aspect;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.query.hive.dto.QueryResponse;
+import com.query.mysql.dto.QueryResponse;
+import com.query.mysql.entity.QueryLog;
+import com.query.mysql.service.QueryLogService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
@@ -15,11 +18,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * AOP切面：拦截Controller方法，包装返回结果并添加总耗时信息
+ * AOP切面：拦截Controller方法，包装返回结果并添加总耗时信息，同时记录查询日志
  */
 @Aspect
 @Component
 public class QueryTimeAspect {
+
+    @Autowired
+    private QueryLogService queryLogService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -49,12 +55,14 @@ public class QueryTimeAspect {
             }
         }
 
-        // 获取请求参数（JSON格式）- 仅用于日志记录
+        // 获取请求参数（JSON格式）
         Object[] args = joinPoint.getArgs();
         String[] paramNames = signature.getParameterNames();
         String queryParams = formatParamsAsJson(paramNames, args);
 
         Object result = null;
+        String queryResult = "成功";
+        String errorMessage = null;
 
         try {
             // 执行Controller方法
@@ -71,33 +79,42 @@ public class QueryTimeAspect {
 
                 // 如果body已经是QueryResponse，直接返回
                 if (body instanceof QueryResponse) {
-                    // 打印查询日志
-                    printQueryLog(queryTime, queryParams, totalTime, queryType);
+                    // 保存日志
+                    saveQueryLog(queryTime, queryParams, totalTime, queryType,
+                            queryResult, errorMessage);
                     return result;
                 }
 
                 // 包装成QueryResponse，只使用总耗时
                 QueryResponse<Object> queryResponse = QueryResponse.success(body, totalTime);
 
-                // 打印查询日志
-                printQueryLog(queryTime, queryParams, totalTime, queryType);
+                // 保存日志
+                saveQueryLog(queryTime, queryParams, totalTime, queryType,
+                        queryResult, errorMessage);
                 return ResponseEntity.ok(queryResponse);
             }
 
             // 如果返回的不是ResponseEntity，直接包装
             QueryResponse<Object> queryResponse = QueryResponse.success(result, totalTime);
 
-            // 打印查询日志
-            printQueryLog(queryTime, queryParams, totalTime, queryType);
+            // 保存日志
+            saveQueryLog(queryTime, queryParams, totalTime, queryType,
+                    queryResult, errorMessage);
             return queryResponse;
 
         } catch (Throwable e) {
             // 即使出现异常，也记录时间和日志
             long totalEndTime = System.currentTimeMillis();
             long totalTime = totalEndTime - totalStartTime;
+            queryResult = "失败";
+            errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.length() > 1024) {
+                errorMessage = errorMessage.substring(0, 1024);
+            }
 
-            // 打印查询日志
-            printQueryLog(queryTime, queryParams, totalTime, queryType);
+            // 保存日志
+            saveQueryLog(queryTime, queryParams, totalTime, queryType,
+                    queryResult, errorMessage);
 
             // 重新抛出异常
             throw e;
@@ -105,24 +122,32 @@ public class QueryTimeAspect {
     }
 
     /**
-     * 打印查询耗时日志
-     * 注意：Hive项目没有查询日志表，此方法仅打印查询日志
+     * 保存查询日志
      */
-    private void printQueryLog(LocalDateTime queryTime, String queryParams,
-            long totalTime, String queryType) {
-        try {
-            // 仅打印日志信息，不保存到数据库
-            System.out.println("查询日志 - 查询类型: " + queryType +
-                    ", 耗时: " + totalTime + "ms" +
-                    ", 时间: " + queryTime);
-            if (queryParams != null) {
-                System.out.println("参数: " + queryParams);
-            }
-        } catch (Exception e) {
-            // 日志记录失败不影响主流程，只打印错误
-            System.err.println("记录查询日志失败: " + e.getMessage());
-            e.printStackTrace();
+    private void saveQueryLog(LocalDateTime queryTime, String queryParams,
+            long totalTime, String queryType, String queryResult,
+            String errorMessage) {
+        QueryLog queryLog = new QueryLog();
+        queryLog.setQueryTime(queryTime);
+        queryLog.setQueryParams(queryParams);
+        queryLog.setQueryDuration((float) totalTime); // 转换为Float，单位毫秒
+
+        // 限制queryType长度为32个字符（数据库字段限制）
+        if (queryType != null && queryType.length() > 32) {
+            queryType = queryType.substring(0, 32);
         }
+        queryLog.setQueryType(queryType);
+
+        // 限制queryResult长度为32个字符（数据库字段限制）
+        if (queryResult != null && queryResult.length() > 32) {
+            queryResult = queryResult.substring(0, 32);
+        }
+        queryLog.setQueryResult(queryResult);
+
+        queryLog.setErrorMessage(errorMessage);
+
+        // 异步保存日志
+        queryLogService.saveQueryLogAsync(queryLog);
     }
 
     /**

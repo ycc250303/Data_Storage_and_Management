@@ -1,129 +1,60 @@
-INSERT OVERWRITE TABLE movie_denormalization
-SELECT m.id               AS movie_asin,
-       m.movie_title      AS movie_title,
-       m.score            AS movie_score,
-       g.genre            AS movie_genre,
-       rd.year            AS release_year,
-       rd.month           AS release_month,
-       rd.day             AS release_day,
-       ceil(rd.month / 3) AS release_quarter,
-       rd.weekday         AS release_weekday,
-       a.actor_ids        AS actor_id_list,
-       d.director_ids     AS director_id_list,
-       e.edition_list     AS edition_list,
-       a.actor_count      AS actor_count,
-       d.director_count   AS director_count,
-       e.edition_count    AS edition_count,
-       m.review_num       AS review_count
-FROM movies m
-         LEFT JOIN movie_genres g
-                   ON m.id = g.movie_id
-         LEFT JOIN release_dates rd
-                   ON rd.movie_id = m.id
-         LEFT JOIN (SELECT movie_id,
-                           concat_ws(',', collect_list(cast(actor_id AS string))) AS actor_ids,
-                           count(*)                                               AS actor_count
-                    FROM movie_actors
-                    GROUP BY movie_id) a ON a.movie_id = m.id
-         LEFT JOIN (SELECT movie_id,
-                           concat_ws(',', collect_list(cast(director_id AS string))) AS director_ids,
-                           count(*)                                                  AS director_count
-                    FROM movie_directors
-                    GROUP BY movie_id) d ON d.movie_id = m.id
-         LEFT JOIN (SELECT movie_id,
-                           concat_ws(',', collect_list(edition)) AS edition_list,
-                           count(*)                              AS edition_count
-                    FROM movie_editions
-                    GROUP BY movie_id) e ON e.movie_id = m.id;
+-- 1. 调整会话参数，防止聚合字符串过短
+SET SESSION group_concat_max_len = 1048576;
 
-INSERT OVERWRITE TABLE actors_cooperation
-SELECT ma1.actor_id                 AS actor1_id,
-       ma2.actor_id                 AS actor2_id,
-       a1.name                      AS actor1_name,
-       a2.name                      AS actor2_name,
-       count(distinct ma1.movie_id) AS movie_num
+-- 2. 插入宽表数据
+TRUNCATE TABLE movie_denormalization;
+INSERT INTO movie_denormalization (
+    movie_asin, movie_title, movie_score, movie_genre, 
+    release_year, release_month, release_day, release_quarter, release_weekday,
+    actor_names, director_names, actor_id_list, director_id_list, edition_list,
+    actor_count, director_count, review_count
+)
+SELECT 
+    m.movie_asin, m.movie_title, m.score, g.genre_list,
+    rd.year, rd.month, rd.day, CEIL(rd.month / 3), rd.weekday,
+    a.names, d.names, a.ids, d.ids, e.editions,
+    IFNULL(a.cnt, 0), IFNULL(d.cnt, 0), m.review_num
+FROM movies m
+LEFT JOIN (
+    SELECT movie_id, GROUP_CONCAT(genre SEPARATOR ', ') as genre_list 
+    FROM movie_genres GROUP BY movie_id
+) g ON m.id = g.movie_id
+LEFT JOIN release_dates rd ON m.id = rd.movie_id
+LEFT JOIN (
+    SELECT ma.movie_id, 
+           GROUP_CONCAT(act.name SEPARATOR ', ') as names,
+           JSON_ARRAYAGG(ma.actor_id) as ids,
+           COUNT(*) as cnt
+    FROM movie_actors ma JOIN actors act ON ma.actor_id = act.id GROUP BY ma.movie_id
+) a ON m.id = a.movie_id
+LEFT JOIN (
+    SELECT md.movie_id, 
+           GROUP_CONCAT(dir.name SEPARATOR ', ') as names,
+           JSON_ARRAYAGG(md.director_id) as ids,
+           COUNT(*) as cnt
+    FROM movie_directors md JOIN directors dir ON md.director_id = dir.id GROUP BY md.movie_id
+) d ON m.id = d.movie_id
+LEFT JOIN (
+    SELECT movie_id, GROUP_CONCAT(edition SEPARATOR ', ') as editions
+    FROM movie_editions GROUP BY movie_id
+) e ON m.id = e.movie_id;
+
+-- 3. 利用宽表快速填充统计表 (零 JOIN，极速)
+INSERT INTO movie_yearly_stats SELECT release_year, COUNT(*), AVG(movie_score) FROM movie_denormalization GROUP BY release_year;
+INSERT INTO movie_monthly_stats SELECT release_year, release_month, COUNT(*), AVG(movie_score) FROM movie_denormalization GROUP BY release_year, release_month;
+INSERT INTO movie_weekday_stats SELECT release_weekday, COUNT(*), AVG(movie_score) FROM movie_denormalization GROUP BY release_weekday;
+
+-- 4. 合作关系与人物统计 (仍需基础表)
+INSERT INTO actors_cooperation (actor1_id, actor2_id, actor1_name, actor2_name, movie_num)
+SELECT ma1.actor_id, ma2.actor_id, a1.name, a2.name, COUNT(*)
 FROM movie_actors ma1
-         JOIN movie_actors ma2
-              ON ma1.movie_id = ma2.movie_id
-                  AND ma1.actor_id < ma2.actor_id
-         JOIN actors a1
-              ON ma1.actor_id = a1.id
-         JOIN actors a2
-              ON ma2.actor_id = a2.id
+JOIN movie_actors ma2 ON ma1.movie_id = ma2.movie_id AND ma1.actor_id < ma2.actor_id
+JOIN actors a1 ON ma1.actor_id = a1.id
+JOIN actors a2 ON ma2.actor_id = a2.id
 GROUP BY ma1.actor_id, ma2.actor_id, a1.name, a2.name;
 
-INSERT OVERWRITE TABLE actor_director_cooperation
-SELECT ma.actor_id                 AS actor_id,
-       md.director_id              AS director_id,
-       a.name                      AS actor_name,
-       d.name                      AS director_name,
-       count(distinct ma.movie_id) AS movie_num
-FROM movie_actors ma
-         JOIN movie_directors md
-              ON ma.movie_id = md.movie_id
-         JOIN actors a
-              ON ma.actor_id = a.id
-         JOIN directors d
-              ON md.director_id = d.id
-GROUP BY ma.actor_id, md.director_id, a.name, d.name;
+INSERT INTO actor_stats SELECT a.id, a.name, COUNT(ma.movie_id), AVG(m.score)
+FROM actors a JOIN movie_actors ma ON a.id = ma.actor_id JOIN movies m ON ma.movie_id = m.id GROUP BY a.id, a.name;
 
-INSERT OVERWRITE TABLE director_stats
-SELECT d.id,
-       d.name,
-       count(distinct md.movie_id) AS movie_count,
-       avg(m.score)                AS avg_score
-FROM directors d
-         JOIN movie_directors md
-              ON md.director_id = d.id
-         JOIN movies m
-              ON m.id = md.movie_id
-GROUP BY d.id, d.name;
-
-INSERT OVERWRITE TABLE actor_stats
-SELECT a.id,
-       a.name,
-       count(distinct ma.movie_id) AS movie_count,
-       avg(m.score)                AS avg_score
-FROM actors a
-         JOIN movie_actors ma
-              ON ma.actor_id = a.id
-         JOIN movies m
-              ON m.id = ma.movie_id
-GROUP BY a.id, a.name;
-
-INSERT OVERWRITE TABLE movie_yearly_stats
-SELECT rd.year            AS release_year,
-       count(rd.movie_id) AS total_movies,
-       avg(m.score)       AS avg_score
-FROM release_dates rd
-         JOIN movies m
-              ON m.id = rd.movie_id
-GROUP BY rd.year;
-
-INSERT OVERWRITE TABLE movie_monthly_stats
-SELECT rd.year            AS release_year,
-       rd.month           AS release_month,
-       count(rd.movie_id) AS total_movies,
-       avg(m.score)       AS avg_score
-FROM release_dates rd
-         JOIN movies m
-              ON m.id = rd.movie_id
-GROUP BY rd.year, rd.month;
-
-INSERT OVERWRITE TABLE movie_weekday_stats
-SELECT rd.weekday,
-       count(*)     AS total_movies,
-       avg(m.score) AS avg_score
-FROM release_dates rd
-         JOIN movies m
-              ON m.id = rd.movie_id
-GROUP BY rd.weekday;
-
-INSERT OVERWRITE TABLE movie_genre_stats
-SELECT g.genre,
-       count(m.id)  AS total_movies,
-       avg(m.score) AS average_score
-FROM movies m
-         JOIN movie_genres g
-              ON m.id = g.movie_id
-GROUP BY g.genre;
+INSERT INTO director_stats SELECT d.id, d.name, COUNT(md.movie_id), AVG(m.score)
+FROM directors d JOIN movie_directors md ON d.id = md.director_id JOIN movies m ON md.movie_id = m.id GROUP BY d.id, d.name;

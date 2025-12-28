@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.query.hive.mapper.MovieGenresMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.query.hive.entity.MovieGenres">
+        <id column="id" property="id" />
+        <result column="movie_id" property="movieId" />
+        <result column="genre" property="genre" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, movie_id, genre
+    </sql>
+
+    <!-- 根据电影类别名称查询电影名称列表 -->
+    <select id="getMoviesByGenreName" resultType="java.util.Map">
+        SELECT DISTINCT m.movie_title 
+        FROM movie_genres mg 
+        JOIN movies m ON mg.movie_id = m.id 
+        WHERE mg.genre = #{movieGenre} 
+        ORDER BY m.movie_title
+    </select>
+
+    <!-- 查询电影类型统计信息 -->
+    <select id="getMovieCountByGenre" resultType="java.util.Map">
+        SELECT 
+            mg.genre,
+            COUNT(DISTINCT m.id) AS total_movies,
+            AVG(m.score) AS average_score
+        FROM 
+            movies m
+        INNER JOIN 
+            movie_genres mg ON m.id = mg.movie_id
+        WHERE 
+            mg.genre = #{movieGenre}
+        GROUP BY 
+            mg.genre
+    </select>
+</mapper>

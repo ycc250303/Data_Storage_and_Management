@@ -16,9 +16,6 @@ import lombok.Data;
 @Data
 @TableName("movie_denormalization")
 public class MovieDenormalization implements Serializable {
-
-    private static final long serialVersionUID = 1L;
-
     /**
      * 电影ID
      */

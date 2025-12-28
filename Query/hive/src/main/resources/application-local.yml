@@ -9,9 +9,9 @@ spring:
     driver-class-name: org.apache.hive.jdbc.HiveDriver
     # Hive连接配置
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 20
       minimum-idle: 5
-      connection-timeout: 30000
+      connection-timeout: 60000
       idle-timeout: 600000
       max-lifetime: 1800000
 
