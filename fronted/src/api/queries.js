@@ -1,5 +1,24 @@
-import http from '@/utils/http'
-import { mockListMovies, mockStats } from '@/mock/mockService'
+import http from "@/utils/http";
+import axios from "axios";
+import { mockListMovies, mockStats } from "@/mock/mockService";
+
+// Hive 专用的 axios 实例，端口为 8081
+const hiveHttp = axios.create({
+  baseURL: "http://localhost:8081",
+  timeout: 60000, // Hive 查询可能较慢，增加超时时间
+});
+
+// 响应拦截器：打印响应日志并直接返回数据
+hiveHttp.interceptors.response.use(
+  (response) => {
+    console.log(`[Hive Response] ${response.config.method.toUpperCase()} ${response.config.url}`, response.data);
+    return response.data;
+  },
+  (error) => {
+    console.error("[Hive Response Error]", error);
+    return Promise.reject(error);
+  }
+);
 
 // Generic pattern: try backend endpoint, fallback to mock
 export async function queryByTime(params) {
@@ -83,6 +102,7 @@ export async function compareTiming(params) {
 }
 
 export async function complexQuery(filters) {
+  const mode = filters.mode || "multi";
   const searchDto = {
     movieTitle: filters.title || "",
     actorName: filters.actor || "",
@@ -102,33 +122,48 @@ export async function complexQuery(filters) {
     searchDto.day = d.getDate();
   }
 
-  console.log('[API] complexQuery sending SearchDto:', searchDto);
+  console.log(`[API] complexQuery (${mode}) starting both MySQL and Hive queries...`);
+
+  // 同时发起 MySQL 和 Hive 查询
+  const mysqlEndpoint = mode === "wide" ? "/api/mysql/movie/search/fast" : "/api/mysql/movie/search";
+  const hiveEndpoint = mode === "wide" ? "/api/hive/movie/search/fast" : "/api/hive/movie/search";
+
+  const mysqlPromise = http.post(mysqlEndpoint, searchDto).catch((err) => {
+    console.error("[MySQL Query Error]", err);
+    return { data: [], totalExecutionTime: 0 };
+  });
+
+  const hivePromise = hiveHttp.post(hiveEndpoint, searchDto).catch((err) => {
+    console.error("[Hive Query Error]", err);
+    return { data: [], totalExecutionTime: 0 };
+  });
 
   try {
-    const res = await http.post("/api/mysql/movie/search", searchDto);
-    // 后端返回的对象结构是 { data: [...], totalExecutionTime: 644 }
-    const items = Array.isArray(res) ? res : res?.data || [];
-    const mysqlTime = res?.totalExecutionTime || 0;
+    // 等待两个查询都完成
+    const [mysqlRes, hiveRes] = await Promise.all([mysqlPromise, hivePromise]);
 
-    // 模拟 Hive 的查询时间进行对比
-    // 通常 Hive 较慢
-    const hiveTime = mysqlTime > 0 ? Math.round(mysqlTime * (1.5 + Math.random() * 2)) : 1200;
+    const items = Array.isArray(mysqlRes) ? mysqlRes : mysqlRes?.data || [];
+    const mysqlTime = mysqlRes?.totalExecutionTime || 0;
+    const hiveTime = hiveRes?.totalExecutionTime || 0;
+
+    console.log(`[API] Queries finished. MySQL: ${mysqlTime}ms, Hive: ${hiveTime}ms`);
 
     return {
-      items: items,
+      items: items, // 使用 MySQL 返回的结果展示表格
       byStorage: {
         mysql: mysqlTime,
         hive: hiveTime,
       },
       samples: [
         {
-          query: "组合查询",
+          query: mode === "wide" ? "组合查询 (宽表)" : "组合查询 (多表)",
           mysql: mysqlTime,
           hive: hiveTime,
         },
       ],
     };
   } catch (err) {
+    console.error("[API] complexQuery failed", err);
     const mod = await import("@/mock/mockService");
     return mod.mockComplexQuery(filters);
   }

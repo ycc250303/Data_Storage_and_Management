@@ -35,6 +35,14 @@
 
         <el-row :gutter="16">
           <el-col :span="8">
+            <el-form-item label="查询模式">
+              <el-radio-group v-model="filters.mode">
+                <el-radio label="multi">多表查询</el-radio>
+                <el-radio label="wide">宽表查询</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
             <el-form-item label="电影类别">
               <el-input v-model="filters.genre" placeholder="类别" clearable />
             </el-form-item>
@@ -60,6 +68,7 @@
                 v-model="filters.yearFrom"
                 :min="1900"
                 :max="2100"
+                style="width: 100%"
               />
             </el-form-item>
           </el-col>
@@ -69,6 +78,7 @@
                 v-model="filters.yearTo"
                 :min="1900"
                 :max="2100"
+                style="width: 100%"
               />
             </el-form-item>
           </el-col>
@@ -79,6 +89,7 @@
                 :min="0"
                 :max="5"
                 :precision="1"
+                style="width: 100%"
               />
             </el-form-item>
           </el-col>
@@ -89,6 +100,7 @@
                 :min="0"
                 :max="5"
                 :precision="1"
+                style="width: 100%"
               />
             </el-form-item>
           </el-col>
@@ -97,13 +109,13 @@
               <el-input-number
                 v-model="filters.limit"
                 :min="1"
-                placeholder="不限制请留空"
+                placeholder="不限制"
                 style="width: 100%"
               />
             </el-form-item>
           </el-col>
-          <el-col :span="2" class="align-end">
-            <el-form-item class="button-group">
+          <el-col :span="4" class="align-end">
+            <el-form-item label-width="0px" class="button-group">
               <el-button type="primary" :loading="loading" @click="run"
                 >查询</el-button
               >
@@ -125,23 +137,41 @@
               <el-table-column
                 prop="movieAsin"
                 label="电影ASIN"
-                min-width="12%"
+                min-width="12"
+                show-overflow-tooltip
               />
               <el-table-column
                 prop="movieTitle"
                 label="电影标题"
-                min-width="20%"
+                min-width="20"
+                show-overflow-tooltip
               />
-              <el-table-column prop="movieScore" label="评分" min-width="8%" />
-              <el-table-column prop="actors" label="演员" min-width="18%" />
-              <el-table-column prop="directors" label="导演" min-width="12%" />
+              <el-table-column prop="movieScore" label="评分" min-width="8" />
+              <el-table-column
+                prop="actors"
+                label="演员"
+                min-width="15"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                prop="directors"
+                label="导演"
+                min-width="12"
+                show-overflow-tooltip
+              />
               <el-table-column
                 prop="movieGenre"
                 label="电影类型"
-                min-width="10%"
+                min-width="10"
+                show-overflow-tooltip
               />
-              <el-table-column prop="date" label="日期" min-width="10%" />
-              <el-table-column prop="edition" label="版本" min-width="10%" />
+              <el-table-column prop="date" label="日期" min-width="10" />
+              <el-table-column
+                prop="edition"
+                label="版本"
+                min-width="13"
+                show-overflow-tooltip
+              />
             </el-table>
             <div
               style="margin-top: 16px; display: flex; justify-content: flex-end"
@@ -202,6 +232,7 @@ import { ref, nextTick, watch, computed } from "vue";
 import { complexQuery } from "@/api/queries";
 
 const filters = ref({
+  mode: "multi",
   title: "",
   director: "",
   actor: "",
@@ -285,6 +316,7 @@ async function run() {
 
 function reset() {
   filters.value = {
+    mode: "multi",
     title: "",
     director: "",
     actor: "",
