@@ -393,4 +393,72 @@
             LIMIT #{dto.size} OFFSET #{dto.page}
         </if>
     </select>
+
+    <!-- 基于外部表的慢速组合查询（用于性能对比） -->
+    <select id="selectMoviesFromExternalTables" resultMap="MovieDetailResultMap">
+        SELECT 
+            m.movie_asin,
+            m.movie_title,
+            m.score,
+            concat_ws(',', collect_list(a.name)) AS actors,
+            concat_ws(',', collect_list(d.name)) AS directors,
+            concat_ws(',', collect_list(mg.genre)) AS genres,
+            concat(rd.year, '-', lpad(rd.month, 2, '0'), '-', lpad(rd.day, 2, '0')) AS release_date,
+            concat_ws(',', collect_list(me.edition)) AS editions
+        FROM 
+            movies_ext m
+        LEFT JOIN 
+            movie_actors_ext ma ON m.id = ma.movie_id
+        LEFT JOIN 
+            actors_ext a ON ma.actor_id = a.id
+        LEFT JOIN 
+            movie_directors_ext md ON m.id = md.movie_id
+        LEFT JOIN 
+            directors_ext d ON md.director_id = d.id
+        LEFT JOIN 
+            movie_genres_ext mg ON m.id = mg.movie_id
+        LEFT JOIN 
+            release_dates_ext rd ON m.id = rd.movie_id
+        LEFT JOIN 
+            movie_editions_ext me ON m.id = me.movie_id
+        <where>
+            <if test="dto.movieTitle != null and dto.movieTitle != ''">
+                AND LOWER(m.movie_title) LIKE CONCAT('%', LOWER(#{dto.movieTitle}), '%')
+            </if>
+            <if test="dto.actorName != null and dto.actorName != ''">
+                AND LOWER(a.name) LIKE CONCAT('%', LOWER(#{dto.actorName}), '%')
+            </if>
+            <if test="dto.directorName != null and dto.directorName != ''">
+                AND LOWER(d.name) LIKE CONCAT('%', LOWER(#{dto.directorName}), '%')
+            </if>
+            <if test="dto.movieGenre != null and dto.movieGenre != ''">
+                AND LOWER(mg.genre) LIKE CONCAT('%', LOWER(#{dto.movieGenre}), '%')
+            </if>
+            <if test="dto.startYear > 0">
+                AND rd.year &gt;= #{dto.startYear}
+            </if>
+            <if test="dto.endYear > 0">
+                AND rd.year &lt;= #{dto.endYear}
+            </if>
+            <if test="dto.month > 0">
+                AND rd.month = #{dto.month}
+            </if>
+            <if test="dto.day > 0">
+                AND rd.day = #{dto.day}
+            </if>
+            <if test="dto.minScore >= 0">
+                AND m.score &gt;= #{dto.minScore}
+            </if>
+            <if test="dto.maxScore > 0">
+                AND m.score &lt;= #{dto.maxScore}
+            </if>
+        </where>
+        GROUP BY 
+            m.id, m.movie_asin, m.movie_title, m.score, rd.year, rd.month, rd.day
+        ORDER BY 
+            m.movie_title
+        <if test="dto.size != null and dto.size &lt; 2147483647">
+            LIMIT #{dto.size} OFFSET #{dto.page}
+        </if>
+    </select>
 </mapper>

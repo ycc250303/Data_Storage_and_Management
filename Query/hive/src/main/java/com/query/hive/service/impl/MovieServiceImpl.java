@@ -268,6 +268,43 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Override
+    public List<MovieDetailDto> searchMoviesByExternalTables(MovieSearchDto dto) {
+        log.info("开始执行外部表慢速查询。参数：{}", dto);
+
+        // 分页处理
+        if (dto.getPage() == -1) {
+            dto.setPage(0);
+            dto.setSize(10000);
+        } else {
+            dto.setPage(dto.getPage() * dto.getSize());
+        }
+
+        // 直接查询外部表
+        List<Map<String, Object>> results = moviesMapper.selectMoviesFromExternalTables(dto);
+
+        List<MovieDetailDto> movieDetailDtoList = new ArrayList<>();
+        if (results != null) {
+            for (Map<String, Object> record : results) {
+                MovieDetailDto movieDetail = new MovieDetailDto();
+                movieDetail.setMovieAsin(record.get("movie_asin") != null ? record.get("movie_asin").toString() : "");
+                movieDetail
+                        .setMovieTitle(record.get("movie_title") != null ? record.get("movie_title").toString() : "");
+                movieDetail.setMovieScore(
+                        record.get("score") != null ? Float.parseFloat(record.get("score").toString()) : 0.0f);
+                movieDetail.setActors(record.get("actors") != null ? record.get("actors").toString() : "");
+                movieDetail.setDirectors(record.get("directors") != null ? record.get("directors").toString() : "");
+                movieDetail.setMovieGenre(record.get("genres") != null ? record.get("genres").toString() : "");
+                movieDetail.setDate(record.get("release_date") != null ? record.get("release_date").toString() : "");
+                movieDetail.setEdition(record.get("editions") != null ? record.get("editions").toString() : "");
+                movieDetailDtoList.add(movieDetail);
+            }
+        }
+
+        log.info("外部表查询完成，返回记录数：{}", movieDetailDtoList.size());
+        return movieDetailDtoList;
+    }
+
+    @Override
     public List<Map<String, Object>> getActorCollaborations(int limit) {
         List<ActorsCooperation> collaborations = actorsCooperationMapper.getCollaborations(limit);
         return collaborations.stream().map(c -> {

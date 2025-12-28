@@ -44,6 +44,16 @@ public class QueryLog implements Serializable {
     private Float queryDuration;
 
     /**
+     * 用户执行的查询语句
+     */
+    private String querySql;
+
+    /**
+     * 返回的行数
+     */
+    private Integer rowsReturned;
+
+    /**
      * 查询类型
      */
     private String queryType;

@@ -1,7 +1,6 @@
 package com.query.hive.mapper;
 
 import com.query.hive.dto.MovieSearchDto;
-import com.query.hive.entity.Movies;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -83,4 +82,9 @@ public interface MoviesMapper {
      * 基于宽表的快速组合查询
      */
     List<Map<String, Object>> selectMoviesFromWideTable(@Param("dto") MovieSearchDto dto);
+
+    /**
+     * 基于外部表的慢速组合查询（用于性能对比）
+     */
+    List<Map<String, Object>> selectMoviesFromExternalTables(@Param("dto") MovieSearchDto dto);
 }

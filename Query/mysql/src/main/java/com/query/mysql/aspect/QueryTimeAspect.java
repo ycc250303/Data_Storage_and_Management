@@ -132,6 +132,19 @@ public class QueryTimeAspect {
         queryLog.setQueryParams(queryParams);
         queryLog.setQueryDuration((float) totalTime); // 转换为Float，单位毫秒
 
+        // 从 SqlContext 获取 SQL 和行数
+        String sql = SqlContext.getSql();
+        Integer rows = SqlContext.getRows();
+
+        if (sql != null) {
+            // 限制 SQL 长度
+            if (sql.length() > 1024) {
+                sql = sql.substring(0, 1021) + "...";
+            }
+            queryLog.setQuerySql(sql);
+        }
+        queryLog.setRowsReturned(rows);
+
         // 限制queryType长度为32个字符（数据库字段限制）
         if (queryType != null && queryType.length() > 32) {
             queryType = queryType.substring(0, 32);
@@ -148,6 +161,9 @@ public class QueryTimeAspect {
 
         // 异步保存日志
         queryLogService.saveQueryLogAsync(queryLog);
+
+        // 清理线程上下文
+        SqlContext.clear();
     }
 
     /**

@@ -76,6 +76,20 @@ public class MovieController {
         }
     }
 
+    /**
+     * 慢速查询接口，用于性能对比（查询 _ext 外部表）
+     */
+    @PostMapping("/search/slow")
+    public ResponseEntity<List<MovieDetailDto>> slowSearch(@RequestBody MovieSearchDto movieSearchDto) {
+        try {
+            List<MovieDetailDto> movies = movieService.searchMoviesByExternalTables(movieSearchDto);
+            return ResponseEntity.ok(movies);
+        } catch (Exception e) {
+            log.error("慢速搜索电影时发生错误", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @PostMapping("/search/fast")
     public ResponseEntity<List<MovieDetailDto>> fastSearch(@RequestBody MovieSearchDto movieSearchDto) {
         List<MovieDetailDto> movies = movieService.searchMoviesByWideTable(movieSearchDto);

@@ -41,6 +41,11 @@ public interface MovieService {
     List<MovieDetailDto> searchMoviesByWideTable(MovieSearchDto dto);
 
     /**
+     * 利用外部表进行慢速组合查询（性能对比）
+     */
+    List<MovieDetailDto> searchMoviesByExternalTables(MovieSearchDto dto);
+
+    /**
      * 获取演员合作统计
      */
     List<Map<String, Object>> getActorCollaborations(int limit);
