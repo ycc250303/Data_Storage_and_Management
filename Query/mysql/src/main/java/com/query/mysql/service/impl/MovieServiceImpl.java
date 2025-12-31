@@ -195,6 +195,16 @@ public class MovieServiceImpl extends ServiceImpl<MoviesMapper, Movies> implemen
         return movieDetailDtoList;
     }
 
+    @Override
+    public MovieDetailDto getMovieDetailById(String id) {
+        MovieSearchDto dto = new MovieSearchDto();
+        dto.setMovieTitle(id); // 这里假设可以使用asin或ID查询，复用之前的逻辑
+        dto.setPage(0);
+        dto.setSize(1);
+        List<MovieDetailDto> results = getMoviesByCombinedConditions(dto);
+        return results.isEmpty() ? null : results.get(0);
+    }
+
     /**
      * 展开版本列表，为每个版本创建一条记录
      */

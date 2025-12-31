@@ -66,4 +66,12 @@ public class MovieController {
             @RequestBody MovieSearchDto searchDto) {
         return ResponseEntity.ok(movieService.searchMoviesByWideTable(searchDto));
     }
+
+    /**
+     * 根据ID获取电影详情 (仿Neo4j接口)
+     */
+    @GetMapping("/detail")
+    public ResponseEntity<MovieDetailDto> getMovieDetailById(@RequestParam String id) {
+        return ResponseEntity.ok(movieService.getMovieDetailById(id));
+    }
 }

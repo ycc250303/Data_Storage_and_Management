@@ -58,4 +58,9 @@ public interface MovieService extends IService<Movies> {
      * @return 电影详情列表
      */
     List<MovieDetailDto> searchMoviesByWideTable(MovieSearchDto dto);
+
+    /**
+     * 根据ASIN/ID获取电影详情
+     */
+    MovieDetailDto getMovieDetailById(String id);
 }

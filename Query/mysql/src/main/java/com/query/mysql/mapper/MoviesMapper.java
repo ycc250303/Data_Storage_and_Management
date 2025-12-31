@@ -34,4 +34,24 @@ public interface MoviesMapper extends BaseMapper<Movies> {
      * 基于宽表的快速组合查询
      */
     List<Map<String, Object>> selectMoviesFromWideTable(@Param("dto") MovieSearchDto dto);
+
+    // 演员合作统计 (多表查询)
+    List<Map<String, Object>> getActorCollaboration(@Param("limit") int limit);
+    // 演员合作统计 (宽表查询)
+    List<Map<String, Object>> getActorCollaborationFast(@Param("limit") int limit);
+
+    // 导演-演员合作统计 (多表查询)
+    List<Map<String, Object>> getDirectorActorCollaboration(@Param("limit") int limit);
+    // 导演-演员合作统计 (宽表查询)
+    List<Map<String, Object>> getDirectorActorCollaborationFast(@Param("limit") int limit);
+
+    // 演员合作评价统计 (多表查询)
+    List<Map<String, Object>> getActorCollaborationReviews(@Param("limit") int limit);
+    // 演员合作评价统计 (宽表查询)
+    List<Map<String, Object>> getActorCollaborationReviewsFast(@Param("limit") int limit);
+
+    // 按类型演员合作统计 (多表查询)
+    List<Map<String, Object>> getActorCollaborationByGenre(@Param("genre") String genre, @Param("limit") int limit);
+    // 按类型演员合作统计 (宽表查询)
+    List<Map<String, Object>> getActorCollaborationByGenreFast(@Param("genre") String genre, @Param("limit") int limit);
 }

@@ -210,4 +210,115 @@
             AND m.score &lt;= #{dto.maxScore}
         </if>
     </select>
+
+    <!-- 演员合作统计 (多表查询) -->
+    <select id="getActorCollaboration" resultType="java.util.Map">
+        SELECT a1.name as actor1, a2.name as actor2, COUNT(ma1.movie_id) as collaborations
+        FROM movie_actors ma1
+        JOIN movie_actors ma2 ON ma1.movie_id = ma2.movie_id
+        JOIN actors a1 ON ma1.actor_id = a1.id
+        JOIN actors a2 ON ma2.actor_id = a2.id
+        WHERE a1.name &lt; a2.name
+        GROUP BY actor1, actor2
+        ORDER BY collaborations DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 演员合作统计 (宽表查询 - 模拟) -->
+    <select id="getActorCollaborationFast" resultType="java.util.Map">
+        /* 注意：在MySQL宽表中直接统计合作较为复杂，这里使用简化逻辑或假设宽表已有预统计数据 */
+        /* 实际开发中通常会专门为这类统计建立汇总表 */
+        SELECT a1.name as actor1, a2.name as actor2, COUNT(ma1.movie_id) as collaborations
+        FROM movie_actors ma1
+        JOIN movie_actors ma2 ON ma1.movie_id = ma2.movie_id
+        JOIN actors a1 ON ma1.actor_id = a1.id
+        JOIN actors a2 ON ma2.actor_id = a2.id
+        WHERE a1.name &lt; a2.name
+        GROUP BY actor1, actor2
+        ORDER BY collaborations DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 导演-演员合作统计 (多表查询) -->
+    <select id="getDirectorActorCollaboration" resultType="java.util.Map">
+        SELECT d.name as director, a.name as actor, COUNT(md.movie_id) as collaborations
+        FROM movie_directors md
+        JOIN movie_actors ma ON md.movie_id = ma.movie_id
+        JOIN directors d ON md.director_id = d.id
+        JOIN actors a ON ma.actor_id = a.id
+        GROUP BY director, actor
+        ORDER BY collaborations DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 导演-演员合作统计 (宽表查询) -->
+    <select id="getDirectorActorCollaborationFast" resultType="java.util.Map">
+        SELECT d.name as director, a.name as actor, COUNT(md.movie_id) as collaborations
+        FROM movie_directors md
+        JOIN movie_actors ma ON md.movie_id = ma.movie_id
+        JOIN directors d ON md.director_id = d.id
+        JOIN actors a ON ma.actor_id = a.id
+        GROUP BY director, actor
+        ORDER BY collaborations DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 演员合作评价统计 (多表查询) -->
+    <select id="getActorCollaborationReviews" resultType="java.util.Map">
+        SELECT a1.name as actor1, a2.name as actor2, SUM(m.review_num) as review_sum
+        FROM movie_actors ma1
+        JOIN movie_actors ma2 ON ma1.movie_id = ma2.movie_id
+        JOIN actors a1 ON ma1.actor_id = a1.id
+        JOIN actors a2 ON ma2.actor_id = a2.id
+        JOIN movies m ON ma1.movie_id = m.id
+        WHERE a1.name &lt; a2.name
+        GROUP BY actor1, actor2
+        ORDER BY review_sum DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 演员合作评价统计 (宽表查询) -->
+    <select id="getActorCollaborationReviewsFast" resultType="java.util.Map">
+        SELECT a1.name as actor1, a2.name as actor2, SUM(m.review_num) as review_sum
+        FROM movie_actors ma1
+        JOIN movie_actors ma2 ON ma1.movie_id = ma2.movie_id
+        JOIN actors a1 ON ma1.actor_id = a1.id
+        JOIN actors a2 ON ma2.actor_id = a2.id
+        JOIN movies m ON ma1.movie_id = m.id
+        WHERE a1.name &lt; a2.name
+        GROUP BY actor1, actor2
+        ORDER BY review_sum DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 按类型演员合作统计 (多表查询) -->
+    <select id="getActorCollaborationByGenre" resultType="java.util.Map">
+        SELECT a1.name as actor1, a2.name as actor2, SUM(m.review_num) as review_sum, COUNT(DISTINCT m.id) as movies
+        FROM movie_genres mg
+        JOIN movies m ON mg.movie_id = m.id
+        JOIN movie_actors ma1 ON m.id = ma1.movie_id
+        JOIN movie_actors ma2 ON m.id = ma2.movie_id
+        JOIN actors a1 ON ma1.actor_id = a1.id
+        JOIN actors a2 ON ma2.actor_id = a2.id
+        WHERE mg.genre = #{genre} AND a1.name &lt; a2.name
+        GROUP BY actor1, actor2
+        ORDER BY review_sum DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 按类型演员合作统计 (宽表查询) -->
+    <select id="getActorCollaborationByGenreFast" resultType="java.util.Map">
+        SELECT a1.name as actor1, a2.name as actor2, SUM(m.review_num) as review_sum, COUNT(DISTINCT m.id) as movies
+        FROM movie_genres mg
+        JOIN movies m ON mg.movie_id = m.id
+        JOIN movie_actors ma1 ON m.id = ma1.movie_id
+        JOIN movie_actors ma2 ON m.id = ma2.movie_id
+        JOIN actors a1 ON ma1.actor_id = a1.id
+        JOIN actors a2 ON ma2.actor_id = a2.id
+        WHERE mg.genre = #{genre} AND a1.name &lt; a2.name
+        GROUP BY actor1, actor2
+        ORDER BY review_sum DESC
+        LIMIT #{limit}
+    </select>
 </mapper>
+

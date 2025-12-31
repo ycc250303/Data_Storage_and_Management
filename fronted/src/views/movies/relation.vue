@@ -10,8 +10,19 @@
         >
         <el-checkbox-group v-model="selectedDBs" size="middle">
           <el-checkbox label="neo4j">Neo4j</el-checkbox>
+          <el-checkbox label="mysql">MySQL</el-checkbox>
           <el-checkbox label="hive">Hive</el-checkbox>
         </el-checkbox-group>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center">
+        <label style="width: 90px; text-align: right; margin-right: 8px"
+          >查询模式</label
+        >
+        <el-radio-group v-model="queryMode" size="small">
+          <el-radio-button label="standard">多表查询</el-radio-button>
+          <el-radio-button label="wide">宽表查询</el-radio-button>
+        </el-radio-group>
       </div>
 
       <div style="display: flex; gap: 8px; align-items: center">
@@ -178,11 +189,14 @@
               <el-card>
                 <div><strong>耗时统计</strong></div>
                 <div class="muted" style="margin-top: 8px">
-                  <span v-if="selectedDBs.includes('hive')">
-                    Hive: {{ formatTime(compare.byStorage?.hive) }}<br />
+                  <span v-if="selectedDBs.includes('mysql')">
+                    MySQL: {{ formatTime(compare.byStorage?.mysql) }}<br />
                   </span>
                   <span v-if="selectedDBs.includes('neo4j')">
-                    Neo4j: {{ formatTime(compare.byStorage?.neo4j) }}
+                    Neo4j: {{ formatTime(compare.byStorage?.neo4j) }}<br />
+                  </span>
+                  <span v-if="selectedDBs.includes('hive')">
+                    Hive: {{ formatTime(compare.byStorage?.hive) }}
                   </span>
                 </div>
               </el-card>
@@ -210,12 +224,17 @@ import {
   getHiveDirectorActorCollaborations,
   getHiveActorAttention,
   getHiveDirectorActorAttention,
+  getMysqlActorCollaborations,
+  getMysqlDirectorActorCollaborations,
+  getMysqlActorAttention,
+  getMysqlActorAttentionByGenre,
 } from "@/api/queries";
 
 const source = ref("actor");
 const movieType = ref("");
 const limit = ref(50);
-const selectedDBs = ref(["neo4j", "hive"]);
+const selectedDBs = ref(["neo4j", "mysql", "hive"]);
+const queryMode = ref("standard");
 const loading = ref(false);
 const graph = ref({ nodes: [], edges: [] });
 const activeTab = ref("results");
@@ -248,11 +267,13 @@ async function run(type = "count") {
   };
 
   let neo4jRes = null;
+  let mysqlRes = null;
   let hiveRes = null;
   const timings = {};
 
   try {
     const promises = [];
+    const isFast = queryMode.value === "wide";
 
     // 1. Neo4j Query
     if (selectedDBs.value.includes("neo4j")) {
@@ -311,7 +332,56 @@ async function run(type = "count") {
       );
     }
 
-    // 2. Hive Query
+    // 2. MySQL Query
+    if (selectedDBs.value.includes("mysql")) {
+      promises.push(
+        (async () => {
+          console.log("[MySQL] Requesting data...");
+          const start = Date.now();
+          const queryParams = { limit: limit.value, genre: movieType.value };
+          try {
+            if (source.value === "actor") {
+              if (type === "count") {
+                if (movieType.value) {
+                  mysqlRes = await getMysqlActorAttentionByGenre(
+                    queryParams,
+                    isFast
+                  );
+                } else {
+                  mysqlRes = await getMysqlActorCollaborations(
+                    queryParams,
+                    isFast
+                  );
+                }
+              } else if (type === "attention") {
+                if (movieType.value) {
+                  mysqlRes = await getMysqlActorAttentionByGenre(
+                    queryParams,
+                    isFast
+                  );
+                } else {
+                  mysqlRes = await getMysqlActorAttention(queryParams, isFast);
+                }
+              }
+            } else if (source.value === "director") {
+              // 导演演员合作在MySQL中目前统一通过getMysqlDirectorActorCollaborations获取
+              mysqlRes = await getMysqlDirectorActorCollaborations(
+                queryParams,
+                isFast
+              );
+            }
+
+            timings.mysql = Date.now() - start;
+            console.log(`[MySQL] Success! Time: ${timings.mysql}ms`);
+          } catch (err) {
+            console.error("[MySQL] Request failed:", err);
+            timings.mysql = 0;
+          }
+        })()
+      );
+    }
+
+    // 3. Hive Query
     if (selectedDBs.value.includes("hive")) {
       promises.push(
         (async () => {
@@ -358,8 +428,10 @@ async function run(type = "count") {
       return g && g.nodes && g.nodes.length > 0;
     };
 
-    // Data prioritization: Neo4j > Hive
-    const finalData = isNotEmpty(neo4jRes)
+    // Data prioritization: MySQL > Neo4j > Hive
+    const finalData = isNotEmpty(mysqlRes)
+      ? mysqlRes
+      : isNotEmpty(neo4jRes)
       ? neo4jRes
       : isNotEmpty(hiveRes)
       ? hiveRes

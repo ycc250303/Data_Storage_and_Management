@@ -204,6 +204,27 @@ export async function getHiveDirectorActorAttention(params) {
   }
 }
 
+// --- MySQL Stats API (Multi-table and Wide-table) ---
+export async function getMysqlActorCollaborations(params, fast = false) {
+  const url = fast ? '/api/mysql/stats/actor-collaboration/fast' : '/api/mysql/stats/actor-collaboration';
+  return http.get(url, { params }).catch(err => { console.error("getMysqlActorCollaborations failed", err); return []; });
+}
+
+export async function getMysqlDirectorActorCollaborations(params, fast = false) {
+  const url = fast ? '/api/mysql/stats/director-actor/fast' : '/api/mysql/stats/director-actor';
+  return http.get(url, { params }).catch(err => { console.error("getMysqlDirectorActorCollaborations failed", err); return []; });
+}
+
+export async function getMysqlActorAttention(params, fast = false) {
+  const url = fast ? '/api/mysql/stats/actor-collaboration-reviews/fast' : '/api/mysql/stats/actor-collaboration-reviews';
+  return http.get(url, { params }).catch(err => { console.error("getMysqlActorAttention failed", err); return []; });
+}
+
+export async function getMysqlActorAttentionByGenre(params, fast = false) {
+  const url = fast ? '/api/mysql/stats/actor-collaboration-by-genre/fast' : '/api/mysql/stats/actor-collaboration-by-genre';
+  return http.get(url, { params }).catch(err => { console.error("getMysqlActorAttentionByGenre failed", err); return []; });
+}
+
 export async function compareTiming(params) {
   try {
     const res = await http.get('/queries/compare', { params })
