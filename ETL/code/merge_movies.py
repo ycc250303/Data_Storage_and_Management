@@ -4,10 +4,11 @@ import re
 import os
 import pickle
 
-INPUT_FILE = '../movie_info_marks_cleaned.csv'
+INPUT_FILE = '../movie_info_name_merged.csv'
 OUTPUT_MERGED_FILE = '../movie_info_merged.csv'
 OUTPUT_CSV_FILE = '../movie_info_title_cleaned.csv'
 OUTPUT_ID_MAPPINGS = '../id_mappings.pkl'
+OUTPUT_ID_MAPPINGS_CSV = '../id_mappings.csv'
 OUTPUT_TITLE_DIRECTORS_MAPPING = '../title_directors_mapping.csv'
 
 # 去除电影标题中包含的版本信息
@@ -60,11 +61,15 @@ def merge_movies():
 
     # 3. 保留原始标题，创建小写版本用于比较
     df['Title_Original'] = df['Title']
-    df['Title_Lower'] = df['Title'].str.lower().str.strip()
+    # 将 & 转换为 and，并处理多余空格，确保两者等效
+    df['Title_Lower'] = df['Title'].str.lower().str.replace('&', ' and ', regex=False).replace(r'\s+', ' ', regex=True).str.strip()
 
-    # 4. 处理 Directors 列，保留原始值，创建小写版本用于比较
+    # 4. 处理 Directors 和 Actors 列，保留原始值，创建小写版本用于比较
     df['Directors_Original'] = df['Directors']
-    df['Directors'] = df['Directors'].fillna('unknown').str.lower().str.strip()
+    df['Directors_Lower'] = df['Directors'].fillna('unknown').str.lower().str.strip()
+
+    df['Actors_Original'] = df['Actors']
+    df['Actors_Lower'] = df['Actors'].fillna('unknown').str.lower().str.strip()
 
     # 5. 记录原始顺序
     df = df.reset_index().rename(columns={'index': 'original_order'})
@@ -80,7 +85,7 @@ def merge_movies():
     mapping_df = grouped['ASIN'].apply(list).reset_index()
     mapping_df = mapping_df.rename(columns={'ASIN': 'ASIN_List'})
 
-    # 将 ASIN 列表转换为字符串（可选）
+    # 将 ASIN 列表转换为字符串
     mapping_df['ASIN_List'] = mapping_df['ASIN_List'].apply(lambda x: ','.join(x))
 
     # 创建映射字典，将重复的 ASIN 映射到主 ASIN
@@ -94,6 +99,9 @@ def merge_movies():
     # 保存映射关系到二进制文件
     with open(OUTPUT_ID_MAPPINGS, 'wb') as file:
         pickle.dump(id_mappings, file)
+    
+    # 保存一份 CSV 格式供人类阅读
+    pd.DataFrame(list(id_mappings.items()), columns=['Duplicate_ASIN', 'Main_ASIN']).to_csv(OUTPUT_ID_MAPPINGS_CSV, index=False)
 
     # 9. 排序去重后的数据按照 original_order
     deduped_df = deduped_df.sort_values('original_order')
@@ -101,7 +109,8 @@ def merge_movies():
     # 10. 恢复原始标题和导演名称并删除临时列
     deduped_df['Title'] = deduped_df['Title_Original']
     deduped_df['Directors'] = deduped_df['Directors_Original']
-    deduped_df = deduped_df.drop(['Title_Original', 'Title_Lower', 'Directors_Original'], axis=1)
+    deduped_df['Actors'] = deduped_df['Actors_Original']
+    deduped_df = deduped_df.drop(['Title_Original', 'Title_Lower', 'Directors_Original', 'Directors_Lower', 'Actors_Original', 'Actors_Lower'], axis=1)
 
     # 11. 获取原始列顺序
     original_columns = pd.read_csv(OUTPUT_CSV_FILE, nrows=0).columns.tolist()

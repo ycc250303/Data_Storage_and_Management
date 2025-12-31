@@ -10,9 +10,10 @@ INPUT_FILE = '../movie_info_marks_cleaned.csv'
 OUTPUT_CSV_FILE = '../movie_info_name_merged.csv'
 OUTPUT_NAME_SET = '../name_set.pkl'
 OUTPUT_NAME_MAP = '../name_map.pkl'
+OUTPUT_NAME_MAP_CSV = '../name_map.csv'
 
-# ================== 参数配置（20w数据安全值） ==================
-FUZZY_THRESHOLD = 92     # 相似度阈值（不建议低于 90）
+# ================== 参数配置 ==================
+FUZZY_THRESHOLD = 92     # 相似度阈值
 MIN_BUCKET_SIZE = 2      # 至少2个才做比较
 
 # ================== 姓名规范化 ==================
@@ -111,6 +112,12 @@ def mergeNames():
 
     with open(OUTPUT_NAME_MAP, 'wb') as f:
         pickle.dump(name_mappings, f)
+        
+    # 保存一份 CSV 格式供人类阅读
+    pd.DataFrame(list(name_mappings.items()), columns=['Original_Name', 'Canonical_Name']).to_csv(OUTPUT_NAME_MAP_CSV, index=False, encoding='utf-8')
+
+    print(f"✅ 映射关系保存到 {OUTPUT_NAME_MAP_CSV}")
+    print(f"✅ 合并完成，共生成映射关系：{len(name_mappings)}")
 
 # ================== Step 3：回填 CSV ==================
 def afterMerge():
